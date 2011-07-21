@@ -1,0 +1,25 @@
+﻿<Window x:Class="oradmin.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:src="clr-namespace:oradmin"
+    Title="Oracle Admin" SizeToContent="WidthAndHeight"
+    ResizeMode="CanResizeWithGrip" WindowState="Normal">
+    <Window.Resources>
+        <HierarchicalDataTemplate DataType="{x:Type src:ConnectionManager}"
+                                  ItemsSource="{Binding Path=ConnectionsDefaultView}">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.ContextMenu>
+                    <ContextMenu Name="connMgrContextMenu">
+                        <MenuItem Header="Nové spojení" Click="pridejSpojeni" />
+                    </ContextMenu>
+                </StackPanel.ContextMenu>
+                <TextBlock>Connections(</TextBlock>
+                <TextBlock Text="{Binding Path=ConnectionsDefaultView.Count}" />
+                <TextBlock>)</TextBlock>
+            </StackPanel>
+        </HierarchicalDataTemplate>
+    </Window.Resources>
+    <DockPanel>
+        <TreeView Name="masterView" />
+    </DockPanel>
+</Window>
