@@ -14,3 +14,5 @@ C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\orad
 C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\oradmin\obj\Debug\oradmin_MarkupCompile.lref
 C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\oradmin\obj\Debug\ConnectionDialog.baml
 C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\oradmin\obj\Debug\ConnectionDialog.g.cs
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\oradmin\obj\Debug\ConnectDescriptorDisplay.baml
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\oradmin\obj\Debug\ConnectDescriptorDisplay.g.cs

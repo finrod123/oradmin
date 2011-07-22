@@ -9,7 +9,7 @@ namespace oradmin
 {
     public delegate void ObjectLockedChanged(bool locked);
 
-    class ObjectError<T>
+    public class ObjectError<T>
         where T : struct
     {
         #region Members
@@ -47,16 +47,16 @@ namespace oradmin
 
     public interface IConnectDescriptor
     {
-        string Host { get; set; }
-        int Port { get; set; }
-        bool UsingSid { get; set; }
-        string ServiceName { get; set; }
-        string InstanceName { get; set; }
-        string Sid { get; set; }
-        EServerType ServerType { get; set; }
+        string Host { get; }
+        int Port { get; }
+        bool UsingSid { get; }
+        string ServiceName { get; }
+        string InstanceName { get; }
+        string Sid { get; }
+        EServerType ServerType { get; }
     }
 
-    class ConnectDescriptorData : IConnectDescriptor, INotifyPropertyChanged, IDisposable
+    public class ConnectDescriptorData : IConnectDescriptor, INotifyPropertyChanged, IDisposable
     {
         #region constants
         public static readonly int DEFAULT_PORT = 1521;
@@ -64,9 +64,33 @@ namespace oradmin
         public static readonly int MAX_PORT = 65535;
         #endregion
 
-        protected ConnectDescriptorData() { }
+        #region Constructor
+
+        public ConnectDescriptorData() { }
+        public ConnectDescriptorData(IConnectDescriptor data)
+        {
+            host = data.Host;
+            port = data.Port;
+
+            if (usingSid = data.UsingSid)
+            {
+                sid = data.Sid;
+                serviceName = string.Empty;
+                instanceName = string.Empty;
+            } else
+            {
+                serviceName = data.ServiceName;
+                instanceName = data.InstanceName;
+                sid = string.Empty;
+            }
+
+            serverType = data.ServerType;
+        }
+
+        #endregion
 
         #region Member data
+        private bool valid;
         private bool locked = false;
         private string host = string.Empty;
         private int port = DEFAULT_PORT;
@@ -77,21 +101,27 @@ namespace oradmin
         private EServerType serverType = EServerType.Dedicated;
         #endregion
 
+
+        #region Events
+        public event ObjectInvalidated Invalidated;
+        public event ObjectLockedChanged LockedChanged;
+        #endregion
+
         #region Properties
 
+        public bool Valid
+        {
+            get { return valid; }
+        }
         public bool Locked
         {
             get { return locked; }
             set
             {
-                if (!locked && value)
+                if (locked != value)
                 {
-                    OnLocked(true);
-                    locked = true;
-                } else if (locked && !value)
-                {
-                    OnLocked(false);
-                    locked = false;
+                    locked = value;
+                    OnLocked(value);
                 }
             }
         }
@@ -140,10 +170,6 @@ namespace oradmin
 
         #endregion Properties
 
-        #region Events
-        public event ObjectInvalidated Invalidated;
-        public event ObjectLockedChanged LockedChanged;
-        #endregion
 
         #region Helper methods
         private void propertySetAndNotify<T>(ref T property, T newValue, string propertyName)
@@ -151,11 +177,13 @@ namespace oradmin
             if (!EqualityComparer<T>.Default.Equals(property, newValue))
             {
                 property = newValue;
-                OnPropertyChanged(propertyName);
+                if (!locked)
+                    OnPropertyChanged(propertyName);
             }
         }
         private void OnInvalidated()
         {
+            valid = false;
             if (Invalidated != null)
             {
                 Invalidated();
@@ -193,12 +221,13 @@ namespace oradmin
         #endregion
     }
 
-    class ReadOnlyConnectDescriptor : IConnectDescriptor, INotifyPropertyChanged
+    public class CachingConnectDescriptor : IConnectDescriptor, INotifyPropertyChanged
     {
         #region Members
-        private bool valid = true;
-        private bool sourceLocked = false;
-        ConnectDescriptorData data;
+
+        bool valid = true;
+        protected bool sourceLocked = false;
+        protected ConnectDescriptorData data;
 
         /// <summary>
         /// Cached data
@@ -214,40 +243,124 @@ namespace oradmin
         #endregion
 
         #region Constructor
-
-        public ReadOnlyConnectDescriptor(ConnectDescriptorData data)
+        public CachingConnectDescriptor(ConnectDescriptorData data)
         {
             if (data == null)
-                throw new ArgumentNullException("Connect descriptor data container");
+                throw new ArgumentNullException("Connect descriptor data");
 
             this.data = data;
-            // load data to cache
-            refreshCachedData();
-            // set up handlers for data container events
+            // set up handlers
             data.Invalidated += new ObjectInvalidated(data_Invalidated);
             data.PropertyChanged += new PropertyChangedEventHandler(data_PropertyChanged);
-            data.LockedChanged += new ObjectLockedChanged(data_Locked);
-        }
-
-        void data_Locked(bool locked)
-        {
-            if (locked)
-            {
-                refreshCachedData();
-                sourceLocked = true;
-            } else
-            {
-                sourceLocked = false;
-                refreshCachedData();
-            }
+            data.LockedChanged += new ObjectLockedChanged(data_LockedChanged);
         }
 
         #endregion
+        
+        #region Helper methods
+        void data_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if(!sourceLocked)
+                OnPropertyChanged(e.PropertyName);
+        }
+        void data_Invalidated()
+        {
+            OnInvalidated();
+        }
+        void data_LockedChanged(bool locked)
+        {
+            sourceLocked = locked;
+            RefreshCachedData();
+        }
+        protected void OnInvalidated()
+        {
+            valid = false;
+            if(Invalidated != null)
+            {
+                Invalidated();
+            }
+        }
+        void checkValidity()
+        {
+            if (!valid)
+                throw new ObjectDisposedException("Connect descriptor data container disposed",
+                    new Exception());
+        }
+        public void RefreshCachedData()
+        {
+            string nHost = data.Host;
+            int nPort = data.Port;
+            bool nUsingSid = data.UsingSid;
+            string nServiceName = data.ServiceName;
+            string nInstanceName = data.InstanceName;
+            string nSid = data.Sid;
+            EServerType nServerType = data.ServerType;
+
+            if (nHost != host)
+                OnPropertyChanged("Host");
+            if (nPort != port)
+                OnPropertyChanged("Port");
+            if (nUsingSid != usingSid)
+                OnPropertyChanged("UsingSid");
+
+            if (nUsingSid)
+            {
+                if (nSid != sid)
+                    OnPropertyChanged("Sid");
+
+                if (!usingSid)
+                {
+                    OnPropertyChanged("ServiceName");
+                    OnPropertyChanged("InstanceName");
+                }
+            } else
+            {
+                if (nServiceName != serviceName)
+                    OnPropertyChanged("ServiceName");
+                if (nInstanceName != instanceName)
+                    OnPropertyChanged("InstanceName");
+
+                if (usingSid)
+                    OnPropertyChanged("Sid");
+            }
+
+            if (nServerType != serverType)
+                OnPropertyChanged("ServerType");
+
+            // nastav hodnoty
+            host = nHost;
+            port = nPort;
+            usingSid = nUsingSid;
+            serviceName = nServiceName;
+            instanceName = nInstanceName;
+            sid = nSid;
+            serverType = nServerType;
+        }
+        #endregion
+
+        #region Events
+        public event ObjectInvalidated Invalidated;
+        #endregion
+
+        #region INotifyPropertyChanged Members
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string property)
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(property));
+            }
+        }
+        #endregion
 
         #region Properties
+        public bool Valid
+        {
+            get { return valid; }
+        }
 
         #region IConnectDescriptor Members
-
         public string Host
         {
             get
@@ -260,7 +373,6 @@ namespace oradmin
                     return data.Host;
             }
         }
-
         public int Port
         {
             get
@@ -273,7 +385,6 @@ namespace oradmin
                     return data.Port;
             }
         }
-
         public bool UsingSid
         {
             get
@@ -286,7 +397,6 @@ namespace oradmin
                     return data.UsingSid;
             }
         }
-
         public string ServiceName
         {
             get
@@ -299,7 +409,6 @@ namespace oradmin
                     return data.ServiceName;
             }
         }
-
         public string InstanceName
         {
             get
@@ -312,7 +421,6 @@ namespace oradmin
                     return data.InstanceName;
             }
         }
-
         public string Sid
         {
             get
@@ -325,7 +433,6 @@ namespace oradmin
                     return data.Sid;
             }
         }
-
         public EServerType ServerType
         {
             get
@@ -338,264 +445,114 @@ namespace oradmin
                     return data.ServerType;
             }
         }
-
         #endregion
-
-        #endregion
-
-        #region Helper methods
-        void data_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            OnPropertyChanged(e.PropertyName);
-        }
-
-        void data_Invalidated()
-        {
-            valid = false;
-            OnInvalidated();
-        }
-
-        void checkValidity()
-        {
-            if (!valid)
-                throw new ObjectDisposedException("Connect descriptor data container disposed",
-                    new Exception());
-        }
-
-        void refreshCachedData()
-        {
-            host = data.Host;
-            port = data.Port;
-            usingSid = data.UsingSid;
-            serviceName = data.ServiceName;
-            instanceName = data.InstanceName;
-            sid = data.Sid;
-            serverType = data.ServerType;
-        }
-
-        #endregion
-
-        #region Events
-
-        public event ObjectInvalidated Invalidated;
-        private void OnInvalidated()
-        {
-            if (Invalidated != null)
-            {
-                Invalidated();
-            }
-        }
-
-        #endregion
-
-        #region INotifyPropertyChanged Members
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged(string propertyName)
-        {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-        #endregion
-
-
+        #endregion 
     }
 
-    public class ConnectDescriptor : IEditableObject, INotifyPropertyChanged
+    class ReadOnlyConnectDescriptor : CachingConnectDescriptor
+    {
+        #region Constructor
+
+        public ReadOnlyConnectDescriptor(ConnectDescriptorData data) :
+            base(data)
+        { }
+
+        #endregion
+    }
+
+    public class ConnectDescriptor : CachingConnectDescriptor, IConnectDescriptor
     {
         #region Members
-
         /// <summary>
         /// Is in editing state?
         /// </summary>
         private bool editing;
         /// <summary>
-        /// Is valid handle?
-        /// </summary>
-        private bool valid;
-        private bool sourceLocked;
-        /// <summary>
         /// indikator pritomnosti chyb v datech objektu
         /// </summary>
-        private bool hasErrors;
-        private List<ObjectError<EConnectDescriptorError>> errors;
+        private bool hasErrors = false;
+        private List<ObjectError<EConnectDescriptorError>> errors = new List<ObjectError<EConnectDescriptorError>>();
 
-        /// <summary>
-        /// Originalni datovy kontejner
-        /// </summary>
-        ConnectDescriptorData data;
         #endregion
 
-
         #region  Backup and cache data
-        private string bHost, cHost;
-        private int bPort, cPort;
-        private bool bUsingSid, cUsingSid;
-        private string bServiceName, cServiceName;
-        private string bInstanceName, cInstanceName;
-        private string bSid, cSid;
-        private EServerType bServerType, cServerType;
+        private string bHost;
+        private int bPort;
+        private bool bUsingSid;
+        private string bServiceName;
+        private string bInstanceName;
+        private string bSid;
+        private EServerType bServerType;
         #endregion
 
 
         #region Constructor
 
-        public ConnectDescriptor(ConnectDescriptorData data)
-        {
-            if (data == null)
-                throw new ArgumentException("Null data container!");
-
-            this.data = data;
-            editing = false;
-
-            // set up error indication
-            valid = true;
-            hasErrors = false;
-            errors = new List<ObjectError<EConnectDescriptorError>>();            
-
-            // register with data container events
-            data.PropertyChanged += new PropertyChangedEventHandler(data_PropertyChanged);
-            data.Invalidated += new ObjectInvalidated(data_Invalidated);
-            data.LockedChanged += new ObjectLockedChanged(data_Locked);
-        }
-
-        void data_Locked(bool locked)
-        {
-            if (locked)
-            {
-                refreshCachedData();
-                sourceLocked = true;
-            } else
-            {
-                sourceLocked = false;
-                refreshCachedData();
-            }
-        }
+        public ConnectDescriptor(ConnectDescriptorData data) :
+            base(data)
+        { }
 
         #endregion
 
         #region Properties
 
-        public bool IsValid
-        {
-            get { return valid; }
-        }
-        public bool IsEditing
+        public bool Editing
         {
             get { return editing; }
         }
-        
-        public string Host
+        public new string Host
         {
             get
             {
-                checkValidity();
-                
-                if (editing)
-                    return bHost;
-
-                if (sourceLocked)
-                    return cHost;
-
-                return data.Host;
+                return base.Host;
             }
             set { propertySetter<string>(ref bHost, value, "Host"); }
         }
-        public int Port
+        public new int Port
         {
             get
             {
-                checkValidity();
-
-                if (editing)
-                    return bPort;
-
-                if (sourceLocked)
-                    return cPort;
-
-                return data.Port;
+                return base.Port;
             }
             set { propertySetter<int>(ref bPort, value, "Port"); }
         }
-        public bool UsingSid
+        public new bool UsingSid
         {
             get
             {
-                checkValidity();
-
-                if (editing)
-                    return bUsingSid;
-
-                if (sourceLocked)
-                    return cUsingSid;
-
-                return data.UsingSid;
+                return base.UsingSid;
             }
             set { propertySetter<bool>(ref bUsingSid, value, "UsingSid"); }
         }
-        public string ServiceName
+        public new string ServiceName
         {
             get
             {
-                checkValidity();
-
-                if (editing)
-                    return bServiceName;
-
-                if (sourceLocked)
-                    return cServiceName;
-
-                return data.ServiceName;
+                return base.ServiceName;
             }
             set { propertySetter<string>(ref bServiceName, value, "ServiceName"); }
         }
-        public string InstanceName
+        public new string InstanceName
         {
             get
             {
-                checkValidity();
-
-                if (editing)
-                    return bInstanceName;
-
-                if (sourceLocked)
-                    return cInstanceName;
-
-                return data.InstanceName;
+                return base.InstanceName;
             }
             set { propertySetter<string>(ref bInstanceName, value, "InstanceName"); }
         }
-        public string Sid
+        public new string Sid
         {
             get
             {
-                checkValidity();
-
-                if (editing)
-                    return bSid;
-
-                if (sourceLocked)
-                    return cSid;
-
-                return data.Sid;
+                return base.Sid;
             }
             set { propertySetter<string>(ref bSid, value, "Sid"); }
         }
-        public EServerType ServerType
+        public new EServerType ServerType
         {
             get
             {
-                checkValidity();
-
-                if (editing)
-                    return bServerType;
-
-                if (sourceLocked)
-                    return cServerType;
-
-                return data.ServerType;
+                return base.ServerType;
             }
             set
             {
@@ -676,26 +633,16 @@ namespace oradmin
 
         #region Helper methods
 
-        private void checkValidity()
-        {
-            if (!valid)
-                throw new ObjectDisposedException("Object disposed", new Exception());
-        }
-
         private void data_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             OnPropertyChanged(e.PropertyName);
         }
         private void data_Invalidated()
         {
-            valid = false;
+            OnInvalidated();
         }
-
         private void propertySetter<T>(ref T property, T newValue, string propertyName)
         {
-            if (!valid)
-                throw new ObjectDisposedException("Object disposed", new Exception());
-
             if (editing)
             {
                 if (!EqualityComparer<T>.Default.Equals(property, newValue))
@@ -706,44 +653,20 @@ namespace oradmin
             } else
                 throw new InvalidOperationException("Not editing!");
         }
-
-        private void refreshCachedData()
-        {
-            cHost = data.Host;
-            cPort = data.Port;
-            cUsingSid = data.UsingSid;
-            cServiceName = data.ServiceName;
-            cInstanceName = data.InstanceName;
-            cSid = data.Sid;
-            cServerType = data.ServerType;
-        }
-
-        private void resetValues()
-        {
-            if (sourceLocked)
-            {
-                bHost = cHost;
-                bPort = cPort;
-                bUsingSid = cUsingSid;
-                bServiceName = cServiceName;
-                bInstanceName = cInstanceName;
-                bSid = cSid;
-                bServerType = cServerType;
-            } else
-            {
-                bHost = data.Host;
-                bPort = data.Port;
-                bUsingSid = data.UsingSid;
-                bServiceName = data.ServiceName;
-                bInstanceName = data.InstanceName;
-                bSid = data.Sid;
-                bServerType = data.ServerType;
-            }
-        }
         public void clearErrors()
         {
             hasErrors = false;
             errors.Clear();
+        }
+        private void resetValues()
+        {
+            bHost = Host;
+            bPort = Port;
+            bUsingSid = UsingSid;
+            bServiceName = ServiceName;
+            bInstanceName = InstanceName;
+            bSid = Sid;
+            bServerType = ServerType;
         }
 
         #endregion
@@ -758,12 +681,10 @@ namespace oradmin
                 editing = true;
             }
         }
-
         public void CancelEdit()
         {
             editing = false;
         }
-
         /// <summary>
         /// Provede validaci objektu a zapise nove hodnoty
         /// </summary>
@@ -774,8 +695,10 @@ namespace oradmin
 
             if (Validate())
             {
-                object o = new object();
-                lock (o)
+                if (sourceLocked)
+                    throw new Exception("Data locked");
+
+                lock(data)
                 {
                     data.Locked = true;
                     data.Host = bHost;
@@ -797,18 +720,6 @@ namespace oradmin
             }
         }
 
-        #endregion
-
-        #region INotifyPropertyChanged Members
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged(string property)
-        {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(property));
-            }
-        }
         #endregion
     }
 
