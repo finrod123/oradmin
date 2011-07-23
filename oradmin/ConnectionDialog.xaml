@@ -3,9 +3,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:src="clr-namespace:oradmin"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:win="clr-namespace:System.Windows;assembly=PresentationCore"
     xmlns:forms="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
     SizeToContent="WidthAndHeight">
     <Window.Resources>
+        
         <ObjectDataProvider x:Key="dbaPrivilegesValues" ObjectType="{x:Type sys:Enum}" MethodName="GetValues">
             <ObjectDataProvider.MethodParameters>
                 <x:TypeExtension Type="{x:Type src:EDbaPrivileges}" />
@@ -18,7 +20,7 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
         
-        <src:DbaPrivilegesEnumConverter x:Key="dbaPrivsEnumConverter"/>
+        <src:EDbaPrivilegesEnumConverter x:Key="dbaPrivsEnumConverter"/>
         <src:ENamingMethodEnumConverter x:Key="namingMethodsEnumConverter" />
         
     </Window.Resources>
@@ -42,11 +44,20 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Margin="5 5 5 5"  Grid.Row="0" Grid.Column="0">Název připojení:</TextBlock>
-                        <TextBox Margin ="5 5 5 5" Grid.Row="0" Grid.Column="1" Name="connName" />
+                        <TextBox Margin ="5 5 5 5" Grid.Row="0" Grid.Column="1" Name="connName">
+                            <TextBox.Text>
+                                <Binding Path="Name">
+                                    <Binding.ValidationRules>
+                                        <DataErrorValidationRule />
+                                    </Binding.ValidationRules>
+                                </Binding>
+                            </TextBox.Text>
+                        </TextBox>
 
                         
                         <TextBlock Margin="5 5 5 5" Grid.Row="1" Grid.Column="0">Uživatelské jméno:</TextBlock>
-                        <TextBox Margin="5 5 5 5" Name="userName" Grid.Row="1" Grid.Column="1" />
+                        <TextBox Margin="5 5 5 5" Name="userName" Grid.Row="1" Grid.Column="1"
+                                 Text="{Binding Path=UserName}" />
 
                         <TextBlock Margin="5 5 5 5" Grid.Row="2" Grid.Column="0">Zvláštní oprávnění:</TextBlock>
                         <ComboBox Margin="5 5 5 5" Name="dbaPrivileges" Grid.Row="2" Grid.Column="1"
@@ -54,41 +65,73 @@
                               SelectedItem="{Binding Path=DbaPrivileges}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" />
+                                    <TextBlock Text="{Binding Path=.,Converter={StaticResource dbaPrivsEnumConverter}}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
 
                         <CheckBox Margin="5 5 5 5" Name="osAuthenticate" Grid.Row="3" Grid.Column="0"
-                              IsChecked="{Binding Path=osAuthenticate, Mode=TwoWay}">
+                              IsChecked="{Binding Path=OsAuthenticate, Mode=TwoWay}">
                             Autentizace prostředky OS
                         </CheckBox>
 
                         <Label Margin="5 5 5 5" Grid.Row="4" Grid.Column="0">Naming method:</Label>
                         <ComboBox Margin="5 5 5 5" Name="namingMethod" Grid.Row="4" Grid.Column="1"
                               ItemsSource="{Binding Source={StaticResource namingMethodsValues}}"
-                              SelectedItem="{Binding Path=NamingMethod}" />
-                        
-                        <src:ConnectDescriptorDisplay Writeable="False" Grid.Row="5" Grid.Column="0"
+                              SelectedItem="{Binding Path=NamingMethod}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Path=.,Converter={StaticResource namingMethodsEnumConverter}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+
+                        <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
+                            <src:ConnectDescriptorDisplay x:Name="connDescDisplay"
+                                                      Writeable="True"
                                                       Grid.ColumnSpan="2"
                                                       HorizontalAlignment="Stretch"
-                                                      VerticalAlignment="Stretch" />
+                                                      VerticalAlignment="Stretch"
+                                                      DataContext="{Binding}">
+                            </src:ConnectDescriptorDisplay>
 
+                            <Grid Name="tnsPanel" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="5 5 5 5">
+                                <Grid.Resources>
+                                    <Style TargetType="Grid">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Path=NamingMethod}" Value="{x:Static src:ENamingMethod.ConnectDescriptor}">
+                                                <Setter Property="Control.Visibility" Value="{x:Static win:Visibility.Hidden}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Path=NamingMethod}" Value="{x:Static src:ENamingMethod.TnsNaming}">
+                                                <Setter Property="Control.Visibility" Value="{x:Static win:Visibility.Visible}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Resources>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Label Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left">
+                                    TNS identifikátor
+                                </Label>
+                                <TextBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Name="tnsName"></TextBox>
+                            </Grid>
+                        </Grid>
                     </Grid>
-                </TabItem>
-
-                <TabItem Name="advancedSettingsTab" Header="Pokročilá nastavení">
-                    <src:ConnectDescriptorDisplay Writeable="True" HorizontalAlignment="Stretch"
-                                              VerticalAlignment="Stretch" />
-
                 </TabItem>
 
             </TabControl>
             <StackPanel Margin="5 5 5 5" HorizontalAlignment="Right" Orientation="Horizontal" Grid.Row="4" Grid.Column="1">
                 <Button Name="openB">Otevři</Button>
                 <Button Name="testB">Test</Button>
-                <Button Name="okB" IsDefault="True">OK</Button>
-                <Button Name="cancelB" IsCancel="True">Storno</Button>
+                <Button Name="saveB" Click="saveB_Click">Save</Button>
+                <Button Name="okB" Click="okB_Click">OK</Button>
+                <Button Name="cancelB" Click="cancelB_Click">Storno</Button>
             </StackPanel>
         </StackPanel>
     </Border>

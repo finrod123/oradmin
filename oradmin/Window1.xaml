@@ -7,7 +7,7 @@
     ResizeMode="CanResizeWithGrip" WindowState="Normal">
     <Window.Resources>
         <HierarchicalDataTemplate DataType="{x:Type src:ConnectionManager}"
-                                  ItemsSource="{Binding Path=ConnectionsDefaultView}">
+                                  ItemsSource="{Binding Path=DefaultView}">
             <StackPanel Orientation="Horizontal">
                 <StackPanel.ContextMenu>
                     <ContextMenu Name="connMgrContextMenu">
@@ -15,7 +15,7 @@
                     </ContextMenu>
                 </StackPanel.ContextMenu>
                 <TextBlock>Connections(</TextBlock>
-                <TextBlock Text="{Binding Path=ConnectionsDefaultView.Count}" />
+                <TextBlock Text="{Binding Path=DefaultView.Count}" />
                 <TextBlock>)</TextBlock>
             </StackPanel>
         </HierarchicalDataTemplate>

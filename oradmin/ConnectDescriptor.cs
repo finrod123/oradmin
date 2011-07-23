@@ -64,6 +64,18 @@ namespace oradmin
         public static readonly int MAX_PORT = 65535;
         #endregion
 
+        #region Member data
+        private bool valid;
+        private bool locked = false;
+        private string host = "hostik";
+        private int port = DEFAULT_PORT;
+        private bool usingSid = false;
+        private string serviceName = string.Empty;
+        private string instanceName = string.Empty;
+        private string sid = string.Empty;
+        private EServerType serverType = EServerType.Dedicated;
+        #endregion
+
         #region Constructor
 
         public ConnectDescriptorData() { }
@@ -89,17 +101,7 @@ namespace oradmin
 
         #endregion
 
-        #region Member data
-        private bool valid;
-        private bool locked = false;
-        private string host = string.Empty;
-        private int port = DEFAULT_PORT;
-        private bool usingSid = false;
-        private string serviceName = string.Empty;
-        private string instanceName = string.Empty;
-        private string sid = string.Empty;
-        private EServerType serverType = EServerType.Dedicated;
-        #endregion
+
 
 
         #region Events
@@ -476,7 +478,7 @@ namespace oradmin
         #endregion
 
         #region  Backup and cache data
-        private string bHost;
+        private string bHost = "host";
         private int bPort;
         private bool bUsingSid;
         private string bServiceName;
@@ -645,8 +647,10 @@ namespace oradmin
         {
             if (editing)
             {
+                System.Windows.MessageBox.Show("Trying to edit connect descriptor");
                 if (!EqualityComparer<T>.Default.Equals(property, newValue))
                 {
+                    System.Windows.MessageBox.Show("Editing connect descriptor");
                     property = newValue;
                     OnPropertyChanged(propertyName);
                 }
@@ -716,6 +720,7 @@ namespace oradmin
                     }
 
                     data.ServerType = bServerType;
+                    data.Locked = false;
                 }
             }
         }

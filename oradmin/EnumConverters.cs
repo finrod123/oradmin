@@ -1,22 +1,68 @@
 ﻿using System;
 using System.Windows.Data;
 using System.ComponentModel;
+using System.Collections.Generic;
 
 namespace oradmin
 {
-    [ValueConversion(typeof(EDbaPrivileges), typeof(string))]
-    public class DbaPrivilegesEnumConverter : IValueConverter
-    {
-        public DbaPrivilegesEnumConverter() { }
+    #region Value converters
 
+    /// <summary>
+    /// Base class for all enum converters
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class EnumValueConverter<T> : IValueConverter
+    {
         #region IValueConverter Members
 
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            if (!Enum.IsDefined(typeof(EDbaPrivileges), value))
+            if (!Enum.IsDefined(typeof(T), value))
                 return value.ToString();
-            
-            switch ((EDbaPrivileges)value)
+
+            EnumToStringConverter<T> converter = EnumConverterMapper.GetConverter(typeof(T)) as EnumToStringConverter<T>;
+            return converter.EnumValueToString((T)value, parameter);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            return Enum.Parse(typeof(T), value.ToString());
+        }
+
+        #endregion
+    }
+
+    #region Custom value converters
+    [ValueConversion(typeof(EDbaPrivileges), typeof(string))]
+    public class EDbaPrivilegesEnumConverter : EnumValueConverter<EDbaPrivileges>
+    { }
+
+    [ValueConversion(typeof(ENamingMethod), typeof(string))]
+    public class ENamingMethodEnumConverter : EnumValueConverter<ENamingMethod>
+    { }
+
+    [ValueConversion(typeof(EServerType), typeof(string))]
+    public class EServerTypeEnumConverter : EnumValueConverter<EServerType>
+    { }
+
+    #endregion
+
+    #endregion
+    /// <summary>
+    /// Interface for enum to string converters
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public interface EnumToStringConverter<T>
+    {
+        string EnumValueToString(T value, object parameter);
+    }
+
+    #region Enum to string converters
+    public class EDbaPrivilegesToStringConverter : EnumToStringConverter<EDbaPrivileges>
+    {
+        public string EnumValueToString(EDbaPrivileges value, object parameter)
+        {
+            switch (value)
             {
                 case EDbaPrivileges.Normal:
                     return "Normální";
@@ -25,49 +71,73 @@ namespace oradmin
                 case EDbaPrivileges.SYSOPER:
                     return "SYSOPER";
                 default:
-                    return string.Empty;
+                    return value.ToString();
             }
         }
+    }
+    public class EServerTypeToStringConverter : EnumToStringConverter<EServerType>
+    {
+        #region EnumToStringConverter<EServerType> Members
 
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public string EnumValueToString(EServerType value, object parameter)
         {
-            return Enum.Parse(typeof(EDbaPrivileges), value.ToString());
+            switch (value)
+            {
+                case EServerType.Dedicated:
+                    return "Vyhrazaný server";
+                case EServerType.Shared:
+                    return "Sdílený server";
+                case EServerType.Pooled:
+                    return "Pooled server";
+                default:
+                    return value.ToString();
+            }
         }
 
         #endregion
     }
-
-    [ValueConversion(typeof(ENamingMethod),typeof(string))]
-    public class ENamingMethodEnumConverter : IValueConverter
+    public class ENamingMethodToStringConverter : EnumToStringConverter<ENamingMethod>
     {
 
-        public ENamingMethodEnumConverter() { }
+        #region EnumToStringConverter<ENamingMethod> Members
 
-        #region IValueConverter Members
-
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public string EnumValueToString(ENamingMethod value, object parameter)
         {
-            if (!Enum.IsDefined(typeof(ENamingMethod), value))
-                return value.ToString();
-
-            switch ((ENamingMethod)value)
+            switch (value)
             {
-                case ENamingMethod.ConnectDesctiptor:
+                case ENamingMethod.ConnectDescriptor:
                     return "Přímé zadání údajů";
                 case ENamingMethod.TnsNaming:
                     return "TNS identifikátor";
                 default:
                     return value.ToString();
             }
-
-
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            return Enum.Parse(typeof(ENamingMethod), value.ToString());
         }
 
         #endregion
+    }
+    #endregion
+
+
+    /// <summary>
+    /// Class to store type binding to enum converters
+    /// </summary>
+    public static class EnumConverterMapper
+    {
+        private static Dictionary<Type, object> specs;
+
+        static EnumConverterMapper()
+        {
+            specs = new Dictionary<Type, object>();
+
+            specs.Add(typeof(EServerType), new EServerTypeToStringConverter());
+            specs.Add(typeof(EDbaPrivileges), new EDbaPrivilegesToStringConverter());
+            specs.Add(typeof(ENamingMethod), new ENamingMethodToStringConverter());
+        }
+
+        public static object GetConverter(Type type)
+        {
+            return specs[type];
+        }
     }
 }

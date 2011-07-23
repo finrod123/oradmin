@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Windows.Data;
+using System.Diagnostics;
 
 namespace oradmin
 {
@@ -113,11 +114,17 @@ namespace oradmin
             if (valid)
             {
                 added = new ReadOnlyConnection(new ConnectionData(connection, this));
+                connections.Add(added);
                 id2Connections.Add(added.Id, added);
                 name2Connections.Add(added.Name, added);
             }
 
             return valid;
+        }
+
+        public ConnectionManager.Connection NewConnection()
+        {
+            return new Connection(new ConnectionData(this));
         }
 
         #endregion
@@ -136,19 +143,19 @@ namespace oradmin
         {
             #region Members
 
-            private readonly int id;
-            private readonly ConnectionManager manager;
+            private int id;
+            private ConnectionManager manager;
             private bool locked = false;
             private bool valid = true;
 
             /// <summary>
             /// Business logic related members
             /// </summary>
-            private string name = string.Empty;
+            private string name;
             private string userName = string.Empty;
             private EDbaPrivileges dbaPrivileges = EDbaPrivileges.Normal;
             private bool osAuthenticate = false;
-            private ENamingMethod namingMethod = ENamingMethod.ConnectDesctiptor;
+            private ENamingMethod namingMethod = ENamingMethod.ConnectDescriptor;
             private string tnsName;
             private ConnectDescriptorData connectDescriptor;
 
@@ -158,17 +165,13 @@ namespace oradmin
 
             public ConnectionData(ConnectionManager manager)
             {
-                if (manager == null)
-                    throw new ArgumentNullException("Connection manager reference");
-
-                this.manager = manager;
-                // nastav nove id
-                id = manager.NextId;
+                init(manager);
+                connectDescriptor = new ConnectDescriptorData();
             }
 
-            public ConnectionData(IConnection connection, ConnectionManager manager):
-                this(manager)
+            public ConnectionData(IConnection connection, ConnectionManager manager)
             {
+                init(manager);
                 fillConnectionData(connection);
             }
 
@@ -249,7 +252,7 @@ namespace oradmin
             {
                 if (LockedChanged != null)
                 {
-                    OnLockedChanged(value);
+                    LockedChanged(value);
                 }
             }
             #endregion
@@ -276,7 +279,7 @@ namespace oradmin
                 osAuthenticate = data.OsAuthenticate;
                 dbaPrivileges = data.DbaPrivileges;
 
-                if ((namingMethod = data.NamingMethod) == ENamingMethod.ConnectDesctiptor)
+                if ((namingMethod = data.NamingMethod) == ENamingMethod.ConnectDescriptor)
                 {
                     connectDescriptor = new ConnectDescriptorData(data);
                     tnsName = string.Empty;
@@ -284,7 +287,7 @@ namespace oradmin
                 {
                     connectDescriptor = new ConnectDescriptorData();
                     tnsName = data.TnsName;
-                } 
+                }
             }
             private void propertySetAndNotify<T>(ref T property, T newValue, string propertyName)
             {
@@ -302,6 +305,15 @@ namespace oradmin
                 {
                     Invalidated();
                 }
+            }
+            private void init(ConnectionManager manager)
+            {
+                if (manager == null)
+                    throw new ArgumentNullException("Connection manager reference");
+
+                this.manager = manager;
+                // nastav nove id
+                id = manager.NextId;
             }
 
             #endregion
@@ -408,7 +420,7 @@ namespace oradmin
             private string bUserName = string.Empty;
             private EDbaPrivileges bDbaPrivileges = EDbaPrivileges.Normal;
             private bool bOsAuthenticate = false;
-            private ENamingMethod bNamingMethod = ENamingMethod.ConnectDesctiptor;
+            private ENamingMethod bNamingMethod = ENamingMethod.ConnectDescriptor;
             private string bTnsName = string.Empty;
             protected CachingConnectDescriptor connectDescriptor;
 
@@ -665,6 +677,7 @@ namespace oradmin
             {
                 connectDescriptor = new ReadOnlyConnectDescriptor(data.ConnectDescriptor);
                 connectDescriptor.PropertyChanged += new PropertyChangedEventHandler(connectDescriptor_PropertyChanged);
+                System.Windows.MessageBox.Show("Readonly connection serviceName " + data.ServiceName);
             }
 
             #endregion
@@ -695,7 +708,9 @@ namespace oradmin
                 base(data)
             {
                 manager = data.Manager;
+                
                 connectDescriptor = new ConnectDescriptor(data.ConnectDescriptor);
+                
                 connectDescriptor.PropertyChanged += new PropertyChangedEventHandler(connectDescriptor_PropertyChanged);
             }
 
@@ -703,6 +718,10 @@ namespace oradmin
 
             #region Properties
 
+            public ConnectionManager Manager
+            {
+                get { return manager; }
+            }
             public new string Name
             {
                 get
@@ -712,15 +731,22 @@ namespace oradmin
 
                     return base.Name;
                 }
-                set { propertySetter<string>(ref bName, value, "Name"); }
+                set {
+                    propertySetter<string>(ref bName, value, "Name");
+                }
             }
             public new string UserName
             {
                 get
                 {
-                    if (editing)
-                        return bUserName;
 
+                    if (editing)
+                    {
+                        System.Windows.MessageBox.Show("Editing Editable connection name: " + bUserName);
+                        return bUserName;
+                    }
+
+                    System.Windows.MessageBox.Show("Editable connection name: " + base.UserName);
                     return base.UserName;
                 }
                 set { propertySetter<string>(ref bUserName, value, "UserName"); }
@@ -840,7 +866,7 @@ namespace oradmin
                         "Invalid naming method"));
                 }
 
-                if (NamingMethod == ENamingMethod.ConnectDesctiptor &&
+                if (NamingMethod == ENamingMethod.ConnectDescriptor &&
                     !((connectDescriptor as ConnectDescriptor).Validate()))
                 {
                     hasErrors = true;
@@ -885,6 +911,7 @@ namespace oradmin
                 {
                     resetValues();
                     (connectDescriptor as ConnectDescriptor).BeginEdit();
+                    System.Windows.MessageBox.Show("Host is " + connectDescriptor.Host);
                     editing = true;
                 }
             }
@@ -929,7 +956,7 @@ namespace oradmin
                         data.UserName = UserName;
                         data.OsAuthenticate = OsAuthenticate;
                         data.DbaPrivileges = DbaPrivileges;
-                        if ((data.NamingMethod = NamingMethod) == ENamingMethod.ConnectDesctiptor)
+                        if ((data.NamingMethod = NamingMethod) == ENamingMethod.ConnectDescriptor)
                         {
                             (connectDescriptor as ConnectDescriptor).EndEdit();
                         } else
@@ -958,10 +985,13 @@ namespace oradmin
 
             private void propertySetter<T>(ref T property, T newValue, string propertyName)
             {
+                System.Windows.MessageBox.Show("Trying to edit Editable connection property: " + propertyName);
+                
                 checkValidity();
 
                 if (editing)
                 {
+                    System.Windows.MessageBox.Show("Editable connection setting");
                     if (!EqualityComparer<T>.Default.Equals(property, newValue))
                     {
                         property = newValue;
@@ -1109,7 +1139,7 @@ namespace oradmin
 
     public enum ENamingMethod
     {
-        ConnectDesctiptor,
+        ConnectDescriptor,
         TnsNaming
     }
 

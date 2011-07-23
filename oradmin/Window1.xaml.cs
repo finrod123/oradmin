@@ -51,13 +51,11 @@ namespace oradmin
         private void pridejSpojeni(object sender, RoutedEventArgs e)
         {
             // dialog pro nove spojeni
-            ConnectionDialog c = new ConnectionDialog();
-            c.Owner = this;
+            ConnectionDialog dialog = new ConnectionDialog(connectionMgr.NewConnection(),
+                                                      true);
+            dialog.Owner = this;
 
-            if (c.ShowDialog().Value)
-            {
-                MessageBox.Show("OK");
-            }
+            dialog.ShowDialog();
         }
     }
 }
