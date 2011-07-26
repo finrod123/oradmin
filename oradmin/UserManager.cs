@@ -9,23 +9,31 @@ using System.Windows.Data;
 
 namespace oradmin
 {
-    class UserManager
+    public class UserManager
     {
         #region Static members
 
-        public const string CURRENT_USER_SELECT = @"SELECT
-                    user_id, username,
-                    default_tablespace, temporary_tablespace,
+        public const string CURRENT_USER_SELECT = @"
+                  SELECT
+                    user_id, default_tablespace, temporary_tablespace,
                     created, expiry_date
                   FROM
                     USER_USERS";
+        
+        const string USERS_SELECT = @"
+                  SELECT
+                    user_id, username, default_tablespace, temporary_tablespace,
+                    created, expiry_date
+                  FROM
+                    DBA_USERS";
 
         #endregion
 
         #region Members
+        SessionManager.Session session;
         OracleConnection conn;
-        User currentUser;
-        Dictionary<int, User> id2Users = new Dictionary<int, User>();
+        CurrentUser currentUser;
+        Dictionary<decimal, User> id2Users = new Dictionary<decimal, User>();
         Dictionary<string, User> name2Users = new Dictionary<string, User>();
         ObservableCollection<User> users = new ObservableCollection<User>();
         ListCollectionView defaultUserView;
@@ -34,16 +42,18 @@ namespace oradmin
 
         #region Constructor
 
-        public UserManager(OracleConnection conn)
+        public UserManager(SessionManager.Session session)
         {
-            if (conn == null)
-                throw new ArgumentNullException("Oracle connection");
+            if (session == null)
+                throw new ArgumentNullException("Session");
 
-            this.conn = conn;
+            this.session = session;
+            this.conn = session.Connection;
             // load current user
-            loadCurrentUser();
+            if (!loadCurrentUser())
+                throw new Exception("Current user not loaded");
             // load other users
-
+            loadUsers();
             // create user view
             defaultUserView = CollectionViewSource.GetDefaultView(users) as ListCollectionView;
         }
@@ -56,7 +66,7 @@ namespace oradmin
         {
             get { return conn; }
         }
-        public User CurrentUser
+        public CurrentUser SessionUser
         {
             get { return currentUser; }
         }
@@ -77,23 +87,7 @@ namespace oradmin
 
             if (odr.Read())
             {
-                DateTime? created = null,
-                          expiryDate = null;
-
-                if (!odr.IsDBNull(4))
-                    created = (DateTime)odr.GetDateTime(4);
-                if (!odr.IsDBNull(5))
-                    expiryDate = (DateTime)odr.GetDateTime(5);
-
-                currentUser = new User(
-                    odr.GetDecimal(0),
-                    odr.GetString(1),
-                    odr.GetString(2),
-                    odr.GetString(3),
-                    created,
-                    expiryDate,
-                    this,
-                    true);
+                currentUser = loadUser(odr, true);
             } else
                 loaded = false;
 
@@ -104,26 +98,62 @@ namespace oradmin
         /// </summary>
         void loadUsers()
         {
+            OracleCommand cmd = new OracleCommand(USERS_SELECT, conn);
+            OracleDataReader odr = cmd.ExecuteReader();
 
+            while (odr.Read())
+            {
+                // load user
+                User user = loadUser(odr, false);
+                // insert him into structures
+                id2Users.Add(user.Id, user);
+                name2Users.Add(user.Name, user);
+                users.Add(user);
+            }
+        }
+        User loadUser(OracleDataReader odr, bool isCurrentUser)
+        {
+            DateTime? created = null,
+                      expiryDate = null;
+
+            if (!odr.IsDBNull(4))
+                created = (DateTime)odr.GetDateTime(odr.GetOrdinal("created"));
+            if (!odr.IsDBNull(5))
+                expiryDate = (DateTime)odr.GetDateTime(odr.GetOrdinal("expiry_date"));
+
+            if (isCurrentUser)
+                return new CurrentUser(
+                    odr.GetDecimal(odr.GetOrdinal("user_id")),
+                    odr.GetString(odr.GetOrdinal("username")),
+                    odr.GetString(odr.GetOrdinal("default_tablespace")),
+                    odr.GetString(odr.GetOrdinal("temporary_tablespace")),
+                    created,
+                    expiryDate,
+                    session);
+            else
+                return new User(
+                    odr.GetDecimal(odr.GetOrdinal("user_id")),
+                    odr.GetString(odr.GetOrdinal("username")),
+                    odr.GetString(odr.GetOrdinal("default_tablespace")),
+                    odr.GetString(odr.GetOrdinal("temporary_tablespace")),
+                    created,
+                    expiryDate,
+                    session);
         }
 
         #endregion
 
+        
         #region User class
 
-        public class User
+        public class User : UserRole
         {
             #region Members
             UserManager manager;
-            PrivManager.PrivManagerLocal privManager;
-
-            OracleConnection conn;
-            bool local;
-
+            
             readonly decimal id;
-            string name;
             object defaultTablespace, temporaryTablespace;
-            DateTime? created, expiryDate;
+            DateTime? expiryDate, created;
 
             #endregion
 
@@ -132,26 +162,17 @@ namespace oradmin
             public User(decimal id, string name,
                         object defaultTablespace, object temporaryTablespace,
                         DateTime? created, DateTime? expiryDate,
-                        UserManager manager, bool local)
+                        SessionManager.Session session):
+                base(name, session)
             {
-                if (manager == null)
-                    throw new ArgumentNullException("User manager");
-
                 this.id = id;
-                this.name = name;
                 this.defaultTablespace = defaultTablespace;
                 this.temporaryTablespace = temporaryTablespace;
-                this.created = created;
                 this.expiryDate = expiryDate;
-                this.manager = manager;
-                this.local = local;
-                this.conn = this.manager.Connection;
-                // nahraj si privilegia
-                privManager = new PrivManager.PrivManagerLocal(
-                // nahraj si role
-
-                // nahraj si kvoty
-
+                this.created = created;
+                this.manager = session.UserManager;
+                // create managers
+                createManagers();
             }
 
             #endregion
@@ -186,6 +207,48 @@ namespace oradmin
             {
                 get { return temporaryTablespace; }
                 set { temporaryTablespace = value; }
+            }
+
+            #endregion
+
+            #region Helper methods
+            
+            protected virtual void createManagers()
+            {
+                // create priv manager
+                privManager = session.PrivManager.CreateUserPrivLocalManager(this);
+                // create role manager
+            }
+
+            #endregion
+        }
+
+        #endregion
+
+        #region CurrentUser class
+
+        public class CurrentUser : User
+        {
+            #region Constructor
+
+            public CurrentUser(
+                        decimal id, string name,
+                        object defaultTablespace, object temporaryTablespace,
+                        DateTime? created, DateTime? expiryDate,
+                        SessionManager.Session session) :
+                base(id, name, defaultTablespace, temporaryTablespace, created, expiryDate, session)
+            { }
+
+            #endregion
+
+            #region Helper methods
+
+            protected override void createManagers()
+            {
+                // create priv manager for current user
+                privManager = session.PrivManager.CreateCurrentUserPrivManagerLocal(this);
+                // create role manager for current user
+
             }
 
             #endregion

@@ -70,8 +70,9 @@ namespace oradmin
 
             UserManager userManager;
             RoleManager roleManager;
-            RoleDependencyManager roleDependencyManager;
             PrivManager privManager;
+
+            UserManager.CurrentUser currentUser;
             #endregion
 
             #region Constructor
@@ -86,12 +87,11 @@ namespace oradmin
                 try
                 {
                     // create managers
-                    userManager = new UserManager(conn);
-                    roleManager = new RoleManager(conn);
-                    roleDependencyManager = new RoleDependencyManager(conn);
                     privManager = new PrivManager(this);
-                    // load current user data
-
+                    roleManager = new RoleManager(conn);
+                    userManager = new UserManager(this);
+                    // store current user reference
+                    currentUser = userManager.SessionUser;
                 }
                 catch (Exception e)
                 {
@@ -109,7 +109,7 @@ namespace oradmin
             }
             public UserManager.User CurrentUser
             {
-                get { return userManager.CurrentUser; }
+                get { return currentUser; }
             }
             public PrivManager PrivManager
             {
@@ -118,6 +118,10 @@ namespace oradmin
             public UserManager UserManager
             {
                 get { return userManager; }
+            }
+            public RoleManager RoleManager
+            {
+                get { return roleManager; }
             }
 
             #endregion

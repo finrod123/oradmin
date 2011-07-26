@@ -103,7 +103,9 @@
       <DependentUpon>ConnectionDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="ConnectionManager.cs" />
+    <Compile Include="Converters.cs" />
     <Compile Include="EnumConverters.cs" />
+    <Compile Include="GrantedPrivilege.cs" />
     <Compile Include="ObservableCollection.cs" />
     <Compile Include="PrivManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -120,11 +122,13 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="RoleDependencyManager.cs" />
+    <Compile Include="RoleGrant.cs" />
     <Compile Include="RoleManager.cs" />
     <Compile Include="SequenceGenerator.cs" />
     <Compile Include="SessionManager.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserManager.cs" />
+    <Compile Include="UserRole.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

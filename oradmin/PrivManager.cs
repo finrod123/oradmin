@@ -47,6 +47,9 @@ namespace oradmin
 
             this.session = session;
             this.conn = session.Connection;
+            // fill data
+            RefreshCurrentUserData();
+            RefreshUsersData();
         }
 
         #endregion
@@ -93,12 +96,24 @@ namespace oradmin
             // notify users and roles
             OnPrivilegeGrantsRefreshed();
         }
-
+        public UserPrivManagerLocal CreateUserPrivLocalManager(UserManager.User user)
+        {
+            return new UserPrivManagerLocal(session, user);
+        }
+        public RolePrivManagerLocal CreateRolePrivLocalManager(RoleManager.Role role)
+        {
+            return new RolePrivManagerLocal(session, role);
+        }
+        public CurrentUserPrivManagerLocal CreateCurrentUserPrivManagerLocal(UserManager.CurrentUser user)
+        {
+            return new CurrentUserPrivManagerLocal(session, user);
+        }
+        public 
         #endregion
 
         #region Protected interface
 
-        IEnumerable<GrantedPrivilege> downloadPrivileges(UserManager.User user)
+        IEnumerable<GrantedPrivilege> downloadUserPrivileges(UserManager.User user)
         {
             return
                  from grant in grants
@@ -111,6 +126,13 @@ namespace oradmin
                  from grant in currentUserGrants
                  where grant.Grantee == session.CurrentUser.Name
                  select grant;
+        }
+        IEnumerable<GrantedPrivilege> downloadRolePrivileges(RoleManager.Role role)
+        {
+            return
+                  from grant in grants
+                  where grant.Grantee == role.Name
+                  select grant;
         }
         #endregion
 
@@ -152,43 +174,44 @@ namespace oradmin
 
         #region PrivManager inner class
 
-        public class PrivManagerLocal
+        /// <summary>
+        /// Abstract local privilege manager for both users and roles
+        /// </summary>
+        public abstract class PrivManagerLocal
         {
             #region Members
-            SessionManager.Session session;
-            PrivManager manager;
-            UserManager.User user;
+            protected SessionManager.Session session;
+            protected PrivManager manager;
+            protected UserRole userRole;
             // list of privileges
-            ObservableCollection<GrantedPrivilege> privileges = new ObservableCollection<GrantedPrivilege>();
+            protected ObservableCollection<GrantedPrivilege> privileges = new ObservableCollection<GrantedPrivilege>();
             // default view of privileges
-            ListCollectionView defaultView;
+            protected ListCollectionView defaultView;
             #endregion
 
             #region Constructor
-            public PrivManagerLocal(SessionManager.Session session, UserManager.User user)
+            public PrivManagerLocal(SessionManager.Session session, UserRole userRole)
             {
-                if (session == null || user == null)
+                if (session == null || userRole == null)
                     throw new ArgumentNullException("Session or User");
 
                 this.manager = session.PrivManager;
-                this.user = user;
+                this.userRole = userRole;
+                // create privilege view
+                defaultView = CollectionViewSource.GetDefaultView(privileges) as ListCollectionView;
                 // download data from PrivManager
-                if (user == session.CurrentUser)
-                    // download data
-                    privileges.AddRange(this.manager.downloadCurrentUserPrivileges());
-                else
-                {
-                    // register for notifications about new grants
-                    this.manager.PrivilegeGrantsRefreshed += new PrivilegeGrantsRefreshedHandler(manager_PrivilegeGrantsRefreshed);
-                    // download data
-                    privileges.AddRange(manager.downloadPrivileges(user));
-                }
+                downloadPrivileges();
             }
 
+            #endregion
+            
+            #region Helper methods
+            
             void manager_PrivilegeGrantsRefreshed()
             {
-                throw new NotImplementedException();
+                downloadPrivileges();
             }
+            protected abstract void downloadPrivileges();
             #endregion
 
             #region Properties
@@ -200,72 +223,65 @@ namespace oradmin
 
             #endregion
         }
-
-        #endregion
-    }
-
-    public class GrantedPrivilege
-    {
-        #region Members
-
-        string grantee;
-        EPrivilege privilege;
-        bool admin;
-
-        string grantor;
-        UserManager.User grantorRef;
-        bool directGrant;
-
-        #endregion
-
-        #region Constructor
-
-        public GrantedPrivilege(string grantee, EPrivilege privilege,
-                                bool admin, bool directGrant):
-            this(grantee, privilege, admin, directGrant, string.Empty, null)
-        { }
-
-        public GrantedPrivilege(string grantee, EPrivilege privilege,
-                                string grantor, UserManager.User grantorRef):
-            this(grantee, privilege, false, false, grantor, grantorRef)
-        { }
-
-        private GrantedPrivilege(string grantee, EPrivilege privilege,
-                                bool admin, bool directGrant,
-                                string grantor, UserManager.User grantorRef)
+        /// <summary>
+        /// Local privilege manager for users
+        /// </summary>
+        public class UserPrivManagerLocal : PrivManagerLocal
         {
-            this.grantee = grantee;
-            this.privilege = privilege;
-            this.admin = admin;
-            this.directGrant = directGrant;
-            this.grantor = grantor;
-            this.grantorRef = grantorRef;
+            #region Constructor
+
+            public UserPrivManagerLocal(SessionManager.Session session, UserManager.User user) :
+                base(session, user)
+            { }
+
+            #endregion
+
+            protected override void downloadPrivileges()
+            {
+                privileges.Clear();
+                manager.downloadUserPrivileges(userRole as UserManager.User);
+            }
         }
-        #endregion
+        /// <summary>
+        /// Local privilege manager for roles
+        /// </summary>
+        public class RolePrivManagerLocal : PrivManagerLocal
+        {
+            #region Constructor
 
-        #region Properties
+            public RolePrivManagerLocal(SessionManager.Session session, RoleManager.Role role) :
+                base(session, role)
+            { }
 
-        public string Grantee
-        {
-            get { return grantee; }
-        }
-        public string Grantor
-        {
-            get { return grantor; }
-        }
-        public EPrivilege Privilege
-        {
-            get { return privilege; }
-        }
-        public bool Admin
-        {
-            get { return admin; }
-        }
-        public bool DirectGrant
-        {
-            get { return directGrant; }
+            #endregion
+            protected override void downloadPrivileges()
+            {
+                privileges.Clear();
+                manager.downloadRolePrivileges(userRole as RoleManager.Role);
+            }
         }
 
+        public class CurrentUserPrivManagerLocal : UserPrivManagerLocal
+        {
+            #region Constructor
+
+            public CurrentUserPrivManagerLocal(SessionManager.Session session,
+                                               UserManager.CurrentUser user) :
+                base(session, user)
+            { }
+
+            #endregion
+
+            #region Helper methods
+
+            protected override void downloadPrivileges()
+            {
+                privileges.Clear();
+                privileges.AddRange(manager.downloadCurrentUserPrivileges());
+            }
+
+            #endregion
+        }
         #endregion
     }
 
