@@ -45,350 +45,350 @@ namespace oradmin
     public class EServerTypeEnumConverter : EnumValueConverter<EServerType>
     { }
 
-    [ValueConversion(typeof(EPrivilege), typeof(string))]
-    public class EPrivilegeEnumConverter : EnumValueConverter<EPrivilege>
+    [ValueConversion(typeof(ESysPrivilege), typeof(string))]
+    public class EPrivilegeEnumConverter : EnumValueConverter<ESysPrivilege>
     {
         public override object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             string strValue = (string)value;
-            EPrivilege enumValue;
+            ESysPrivilege enumValue;
 
             #region Enum conversion branching
 
             if (strValue.Equals("ADMINISTER ANY SQL TUNING SET"))
-                enumValue = EPrivilege.AdministerAnySqlTuningSet;
+                enumValue = ESysPrivilege.AdministerAnySqlTuningSet;
             else if (strValue.Equals("ADMINISTER DATABASE TRIGGER"))
-                enumValue = EPrivilege.AdministerDatabaseTrigger;
+                enumValue = ESysPrivilege.AdministerDatabaseTrigger;
             else if (strValue.Equals("ADMINISTER RESOURCE MANAGER"))
-                enumValue = EPrivilege.AdministerResourceManager;
+                enumValue = ESysPrivilege.AdministerResourceManager;
             else if (strValue.Equals("ADMINISTER SQL TUNING SET"))
-                enumValue = EPrivilege.AdministerSqlTuningSet;
+                enumValue = ESysPrivilege.AdministerSqlTuningSet;
             else if (strValue.Equals("ADVISOR"))
-                enumValue = EPrivilege.Advisor;
+                enumValue = ESysPrivilege.Advisor;
             else if (strValue.Equals("ALTER ANY CLUSTER"))
-                enumValue = EPrivilege.AlterAnyCluster;
+                enumValue = ESysPrivilege.AlterAnyCluster;
             else if (strValue.Equals("ALTER ANY DIMENSION"))
-                enumValue = EPrivilege.AlterAnyDimension;
+                enumValue = ESysPrivilege.AlterAnyDimension;
             else if (strValue.Equals("ALTER ANY EVALUATION CONTEXT"))
-                enumValue = EPrivilege.AlterAnyEvaluationContext;
+                enumValue = ESysPrivilege.AlterAnyEvaluationContext;
             else if (strValue.Equals("ALTER ANY INDEX"))
-                enumValue = EPrivilege.AlterAnyIndex;
+                enumValue = ESysPrivilege.AlterAnyIndex;
             else if (strValue.Equals("ALTER ANY INDEXTYPE"))
-                enumValue = EPrivilege.AlterAnyIndextype;
+                enumValue = ESysPrivilege.AlterAnyIndextype;
             else if (strValue.Equals("ALTER ANY LIBRARY"))
-                enumValue = EPrivilege.AlterAnyLibrary;
+                enumValue = ESysPrivilege.AlterAnyLibrary;
             else if (strValue.Equals("ALTER ANY MATERIALIZED VIEW"))
-                enumValue = EPrivilege.AlterAnyMaterializedView;
+                enumValue = ESysPrivilege.AlterAnyMaterializedView;
             else if (strValue.Equals("ALTER ANY OPERATOR"))
-                enumValue = EPrivilege.AlterAnyOperator;
+                enumValue = ESysPrivilege.AlterAnyOperator;
             else if (strValue.Equals("ALTER ANY OUTLINE"))
-                enumValue = EPrivilege.AlterAnyOutline;
+                enumValue = ESysPrivilege.AlterAnyOutline;
             else if (strValue.Equals("ALTER ANY PROCEDURE"))
-                enumValue = EPrivilege.AlterAnyProcedure;
+                enumValue = ESysPrivilege.AlterAnyProcedure;
             else if (strValue.Equals("ALTER ANY ROLE"))
-                enumValue = EPrivilege.AlterAnyRole;
+                enumValue = ESysPrivilege.AlterAnyRole;
             else if (strValue.Equals("ALTER ANY RULE"))
-                enumValue = EPrivilege.AlterAnyRule;
+                enumValue = ESysPrivilege.AlterAnyRule;
             else if (strValue.Equals("ALTER ANY RULE SET"))
-                enumValue = EPrivilege.AlterAnyRuleSet;
+                enumValue = ESysPrivilege.AlterAnyRuleSet;
             else if (strValue.Equals("ALTER ANY SEQUENCE"))
-                enumValue = EPrivilege.AlterAnySequence;
+                enumValue = ESysPrivilege.AlterAnySequence;
             else if (strValue.Equals("ALTER ANY SQL PROFILE"))
-                enumValue = EPrivilege.AlterAnySqlProfile;
+                enumValue = ESysPrivilege.AlterAnySqlProfile;
             else if (strValue.Equals("ALTER ANY TABLE"))
-                enumValue = EPrivilege.AlterAnyTable;
+                enumValue = ESysPrivilege.AlterAnyTable;
             else if (strValue.Equals("ALTER ANY TRIGGER"))
-                enumValue = EPrivilege.AlterAnyTrigger;
+                enumValue = ESysPrivilege.AlterAnyTrigger;
             else if (strValue.Equals("ALTER ANY TYPE"))
-                enumValue = EPrivilege.AlterAnyType;
+                enumValue = ESysPrivilege.AlterAnyType;
             else if (strValue.Equals("ALTER DATABASE"))
-                enumValue = EPrivilege.AlterDatabase;
+                enumValue = ESysPrivilege.AlterDatabase;
             else if (strValue.Equals("ALTER PROFILE"))
-                enumValue = EPrivilege.AlterProfile;
+                enumValue = ESysPrivilege.AlterProfile;
             else if (strValue.Equals("ALTER RESOURCE COST"))
-                enumValue = EPrivilege.AlterResourceCost;
+                enumValue = ESysPrivilege.AlterResourceCost;
             else if (strValue.Equals("ALTER ROLLBACK SEGMENT"))
-                enumValue = EPrivilege.AlterRollbackSegment;
+                enumValue = ESysPrivilege.AlterRollbackSegment;
             else if (strValue.Equals("ALTER SESSION"))
-                enumValue = EPrivilege.AlterSession;
+                enumValue = ESysPrivilege.AlterSession;
             else if (strValue.Equals("ALTER SYSTEM"))
-                enumValue = EPrivilege.AlterSystem;
+                enumValue = ESysPrivilege.AlterSystem;
             else if (strValue.Equals("ALTER TABLESPACE"))
-                enumValue = EPrivilege.AlterTablespace;
+                enumValue = ESysPrivilege.AlterTablespace;
             else if (strValue.Equals("ALTER USER"))
-                enumValue = EPrivilege.AlterUser;
+                enumValue = ESysPrivilege.AlterUser;
             else if (strValue.Equals("ANALYZE ANY"))
-                enumValue = EPrivilege.AnalyzeAny;
+                enumValue = ESysPrivilege.AnalyzeAny;
             else if (strValue.Equals("ANALYZE ANY DICTIONARY"))
-                enumValue = EPrivilege.AnalyzeAnyDictionary;
+                enumValue = ESysPrivilege.AnalyzeAnyDictionary;
             else if (strValue.Equals("AUDIT ANY"))
-                enumValue = EPrivilege.AuditAny;
+                enumValue = ESysPrivilege.AuditAny;
             else if (strValue.Equals("AUDIT SYSTEM"))
-                enumValue = EPrivilege.AuditSystem;
+                enumValue = ESysPrivilege.AuditSystem;
             else if (strValue.Equals("BACKUP ANY TABLE"))
-                enumValue = EPrivilege.BackupAnyTable;
+                enumValue = ESysPrivilege.BackupAnyTable;
             else if (strValue.Equals("BECOME USER"))
-                enumValue = EPrivilege.BecomeUser;
+                enumValue = ESysPrivilege.BecomeUser;
             else if (strValue.Equals("CHANGE NOTIFICATION"))
-                enumValue = EPrivilege.ChangeNotification;
+                enumValue = ESysPrivilege.ChangeNotification;
             else if (strValue.Equals("COMMENT ANY TABLE"))
-                enumValue = EPrivilege.CommentAnyTable;
+                enumValue = ESysPrivilege.CommentAnyTable;
             else if (strValue.Equals("CREATE ANY CLUSTER"))
-                enumValue = EPrivilege.CreateAnyCluster;
+                enumValue = ESysPrivilege.CreateAnyCluster;
             else if (strValue.Equals("CREATE ANY CONTEXT"))
-                enumValue = EPrivilege.CreateAnyContext;
+                enumValue = ESysPrivilege.CreateAnyContext;
             else if (strValue.Equals("CREATE ANY DIMENSION"))
-                enumValue = EPrivilege.CreateAnyDimension;
+                enumValue = ESysPrivilege.CreateAnyDimension;
             else if (strValue.Equals("CREATE ANY DIRECTORY"))
-                enumValue = EPrivilege.CreateAnyDirectory;
+                enumValue = ESysPrivilege.CreateAnyDirectory;
             else if (strValue.Equals("CREATE ANY EVALUATION CONTEXT"))
-                enumValue = EPrivilege.CreateAnyEvaluationContext;
+                enumValue = ESysPrivilege.CreateAnyEvaluationContext;
             else if (strValue.Equals("CREATE ANY INDEX"))
-                enumValue = EPrivilege.CreateAnyIndex;
+                enumValue = ESysPrivilege.CreateAnyIndex;
             else if (strValue.Equals("CREATE ANY INDEXTYPE"))
-                enumValue = EPrivilege.CreateAnyIndextype;
+                enumValue = ESysPrivilege.CreateAnyIndextype;
             else if (strValue.Equals("CREATE ANY JOB"))
-                enumValue = EPrivilege.CreateAnyJob;
+                enumValue = ESysPrivilege.CreateAnyJob;
             else if (strValue.Equals("CREATE ANY LIBRARY"))
-                enumValue = EPrivilege.CreateAnyLibrary;
+                enumValue = ESysPrivilege.CreateAnyLibrary;
             else if (strValue.Equals("CREATE ANY MATERIALIZED VIEW"))
-                enumValue = EPrivilege.CreateAnyMaterializedView;
+                enumValue = ESysPrivilege.CreateAnyMaterializedView;
             else if (strValue.Equals("CREATE ANY OPERATOR"))
-                enumValue = EPrivilege.CreateAnyOperator;
+                enumValue = ESysPrivilege.CreateAnyOperator;
             else if (strValue.Equals("CREATE ANY OUTLINE"))
-                enumValue = EPrivilege.CreateAnyOutline;
+                enumValue = ESysPrivilege.CreateAnyOutline;
             else if (strValue.Equals("CREATE ANY PROCEDURE"))
-                enumValue = EPrivilege.CreateAnyProcedure;
+                enumValue = ESysPrivilege.CreateAnyProcedure;
             else if (strValue.Equals("CREATE ANY RULE"))
-                enumValue = EPrivilege.CreateAnyRule;
+                enumValue = ESysPrivilege.CreateAnyRule;
             else if (strValue.Equals("CREATE ANY RULE SET"))
-                enumValue = EPrivilege.CreateAnyRuleSet;
+                enumValue = ESysPrivilege.CreateAnyRuleSet;
             else if (strValue.Equals("CREATE ANY SEQUENCE"))
-                enumValue = EPrivilege.CreateAnySequence;
+                enumValue = ESysPrivilege.CreateAnySequence;
             else if (strValue.Equals("CREATE ANY SQL PROFILE"))
-                enumValue = EPrivilege.CreateAnySqlProfile;
+                enumValue = ESysPrivilege.CreateAnySqlProfile;
             else if (strValue.Equals("CREATE ANY SYNONYM"))
-                enumValue = EPrivilege.CreateAnySynonym;
+                enumValue = ESysPrivilege.CreateAnySynonym;
             else if (strValue.Equals("CREATE ANY TABLE"))
-                enumValue = EPrivilege.CreateAnyTable;
+                enumValue = ESysPrivilege.CreateAnyTable;
             else if (strValue.Equals("CREATE ANY TRIGGER"))
-                enumValue = EPrivilege.CreateAnyTrigger;
+                enumValue = ESysPrivilege.CreateAnyTrigger;
             else if (strValue.Equals("CREATE ANY TYPE"))
-                enumValue = EPrivilege.CreateAnyType;
+                enumValue = ESysPrivilege.CreateAnyType;
             else if (strValue.Equals("CREATE ANY VIEW"))
-                enumValue = EPrivilege.CreateAnyView;
+                enumValue = ESysPrivilege.CreateAnyView;
             else if (strValue.Equals("CREATE CLUSTER"))
-                enumValue = EPrivilege.CreateCluster;
+                enumValue = ESysPrivilege.CreateCluster;
             else if (strValue.Equals("CREATE DATABASE LINK"))
-                enumValue = EPrivilege.CreateDatabaseLink;
+                enumValue = ESysPrivilege.CreateDatabaseLink;
             else if (strValue.Equals("CREATE DIMENSION"))
-                enumValue = EPrivilege.CreateDimension;
+                enumValue = ESysPrivilege.CreateDimension;
             else if (strValue.Equals("CREATE EVALUATION CONTEXT"))
-                enumValue = EPrivilege.CreateEvaluationContext;
+                enumValue = ESysPrivilege.CreateEvaluationContext;
             else if (strValue.Equals("CREATE EXTERNAL JOB"))
-                enumValue = EPrivilege.CreateExternalJob;
+                enumValue = ESysPrivilege.CreateExternalJob;
             else if (strValue.Equals("CREATE INDEXTYPE"))
-                enumValue = EPrivilege.CreateIndextype;
+                enumValue = ESysPrivilege.CreateIndextype;
             else if (strValue.Equals("CREATE JOB"))
-                enumValue = EPrivilege.CreateJob;
+                enumValue = ESysPrivilege.CreateJob;
             else if (strValue.Equals("CREATE LIBRARY"))
-                enumValue = EPrivilege.CreateLibrary;
+                enumValue = ESysPrivilege.CreateLibrary;
             else if (strValue.Equals("CREATE MATERIALIZED VIEW"))
-                enumValue = EPrivilege.CreateMaterializedView;
+                enumValue = ESysPrivilege.CreateMaterializedView;
             else if (strValue.Equals("CREATE OPERATOR"))
-                enumValue = EPrivilege.CreateOperator;
+                enumValue = ESysPrivilege.CreateOperator;
             else if (strValue.Equals("CREATE PROCEDURE"))
-                enumValue = EPrivilege.CreateProcedure;
+                enumValue = ESysPrivilege.CreateProcedure;
             else if (strValue.Equals("CREATE PROFILE"))
-                enumValue = EPrivilege.CreateProfile;
+                enumValue = ESysPrivilege.CreateProfile;
             else if (strValue.Equals("CREATE PUBLIC DATABASE LINK"))
-                enumValue = EPrivilege.CreatePublicDatabaseLink;
+                enumValue = ESysPrivilege.CreatePublicDatabaseLink;
             else if (strValue.Equals("CREATE PUBLIC SYNONYM"))
-                enumValue = EPrivilege.CreatePublicSynonym;
+                enumValue = ESysPrivilege.CreatePublicSynonym;
             else if (strValue.Equals("CREATE ROLE"))
-                enumValue = EPrivilege.CreateRole;
+                enumValue = ESysPrivilege.CreateRole;
             else if (strValue.Equals("CREATE ROLLBACK SEGMENT"))
-                enumValue = EPrivilege.CreateRollbackSegment;
+                enumValue = ESysPrivilege.CreateRollbackSegment;
             else if (strValue.Equals("CREATE RULE"))
-                enumValue = EPrivilege.CreateRule;
+                enumValue = ESysPrivilege.CreateRule;
             else if (strValue.Equals("CREATE RULE SET"))
-                enumValue = EPrivilege.CreateRuleSet;
+                enumValue = ESysPrivilege.CreateRuleSet;
             else if (strValue.Equals("CREATE SEQUENCE"))
-                enumValue = EPrivilege.CreateSequence;
+                enumValue = ESysPrivilege.CreateSequence;
             else if (strValue.Equals("CREATE SESSION"))
-                enumValue = EPrivilege.CreateSession;
+                enumValue = ESysPrivilege.CreateSession;
             else if (strValue.Equals("CREATE SYNONYM"))
-                enumValue = EPrivilege.CreateSynonym;
+                enumValue = ESysPrivilege.CreateSynonym;
             else if (strValue.Equals("CREATE TABLE"))
-                enumValue = EPrivilege.CreateTable;
+                enumValue = ESysPrivilege.CreateTable;
             else if (strValue.Equals("CREATE TABLESPACE"))
-                enumValue = EPrivilege.CreateTablespace;
+                enumValue = ESysPrivilege.CreateTablespace;
             else if (strValue.Equals("CREATE TRIGGER"))
-                enumValue = EPrivilege.CreateTrigger;
+                enumValue = ESysPrivilege.CreateTrigger;
             else if (strValue.Equals("CREATE TYPE"))
-                enumValue = EPrivilege.CreateType;
+                enumValue = ESysPrivilege.CreateType;
             else if (strValue.Equals("CREATE USER"))
-                enumValue = EPrivilege.CreateUser;
+                enumValue = ESysPrivilege.CreateUser;
             else if (strValue.Equals("CREATE VIEW"))
-                enumValue = EPrivilege.CreateView;
+                enumValue = ESysPrivilege.CreateView;
             else if (strValue.Equals("DEBUG ANY PROCEDURE"))
-                enumValue = EPrivilege.DebugAnyProcedure;
+                enumValue = ESysPrivilege.DebugAnyProcedure;
             else if (strValue.Equals("DEBUG CONNECT SESSION"))
-                enumValue = EPrivilege.DebugConnectSession;
+                enumValue = ESysPrivilege.DebugConnectSession;
             else if (strValue.Equals("DELETE ANY TABLE"))
-                enumValue = EPrivilege.DeleteAnyTable;
+                enumValue = ESysPrivilege.DeleteAnyTable;
             else if (strValue.Equals("DEQUEUE ANY QUEUE"))
-                enumValue = EPrivilege.DequeueAnyQueue;
+                enumValue = ESysPrivilege.DequeueAnyQueue;
             else if (strValue.Equals("DROP ANY CLUSTER"))
-                enumValue = EPrivilege.DropAnyCluster;
+                enumValue = ESysPrivilege.DropAnyCluster;
             else if (strValue.Equals("DROP ANY CONTEXT"))
-                enumValue = EPrivilege.DropAnyContext;
+                enumValue = ESysPrivilege.DropAnyContext;
             else if (strValue.Equals("DROP ANY DIMENSION"))
-                enumValue = EPrivilege.DropAnyDimension;
+                enumValue = ESysPrivilege.DropAnyDimension;
             else if (strValue.Equals("DROP ANY DIRECTORY"))
-                enumValue = EPrivilege.DropAnyDirectory;
+                enumValue = ESysPrivilege.DropAnyDirectory;
             else if (strValue.Equals("DROP ANY EVALUATION CONTEXT"))
-                enumValue = EPrivilege.DropAnyEvaluationContext;
+                enumValue = ESysPrivilege.DropAnyEvaluationContext;
             else if (strValue.Equals("DROP ANY INDEX"))
-                enumValue = EPrivilege.DropAnyIndex;
+                enumValue = ESysPrivilege.DropAnyIndex;
             else if (strValue.Equals("DROP ANY INDEXTYPE"))
-                enumValue = EPrivilege.DropAnyIndextype;
+                enumValue = ESysPrivilege.DropAnyIndextype;
             else if (strValue.Equals("DROP ANY LIBRARY"))
-                enumValue = EPrivilege.DropAnyLibrary;
+                enumValue = ESysPrivilege.DropAnyLibrary;
             else if (strValue.Equals("DROP ANY MATERIALIZED VIEW"))
-                enumValue = EPrivilege.DropAnyMaterializedView;
+                enumValue = ESysPrivilege.DropAnyMaterializedView;
             else if (strValue.Equals("DROP ANY OPERATOR"))
-                enumValue = EPrivilege.DropAnyOperator;
+                enumValue = ESysPrivilege.DropAnyOperator;
             else if (strValue.Equals("DROP ANY OUTLINE"))
-                enumValue = EPrivilege.DropAnyOutline;
+                enumValue = ESysPrivilege.DropAnyOutline;
             else if (strValue.Equals("DROP ANY PROCEDURE"))
-                enumValue = EPrivilege.DropAnyProcedure;
+                enumValue = ESysPrivilege.DropAnyProcedure;
             else if (strValue.Equals("DROP ANY ROLE"))
-                enumValue = EPrivilege.DropAnyRole;
+                enumValue = ESysPrivilege.DropAnyRole;
             else if (strValue.Equals("DROP ANY RULE"))
-                enumValue = EPrivilege.DropAnyRule;
+                enumValue = ESysPrivilege.DropAnyRule;
             else if (strValue.Equals("DROP ANY RULE SET"))
-                enumValue = EPrivilege.DropAnyRuleSet;
+                enumValue = ESysPrivilege.DropAnyRuleSet;
             else if (strValue.Equals("DROP ANY SEQUENCE"))
-                enumValue = EPrivilege.DropAnySequence;
+                enumValue = ESysPrivilege.DropAnySequence;
             else if (strValue.Equals("DROP ANY SQL PROFILE"))
-                enumValue = EPrivilege.DropAnySqlProfile;
+                enumValue = ESysPrivilege.DropAnySqlProfile;
             else if (strValue.Equals("DROP ANY SYNONYM"))
-                enumValue = EPrivilege.DropAnySynonym;
+                enumValue = ESysPrivilege.DropAnySynonym;
             else if (strValue.Equals("DROP ANY TABLE"))
-                enumValue = EPrivilege.DropAnyTable;
+                enumValue = ESysPrivilege.DropAnyTable;
             else if (strValue.Equals("DROP ANY TRIGGER"))
-                enumValue = EPrivilege.DropAnyTrigger;
+                enumValue = ESysPrivilege.DropAnyTrigger;
             else if (strValue.Equals("DROP ANY TYPE"))
-                enumValue = EPrivilege.DropAnyType;
+                enumValue = ESysPrivilege.DropAnyType;
             else if (strValue.Equals("DROP ANY VIEW"))
-                enumValue = EPrivilege.DropAnyView;
+                enumValue = ESysPrivilege.DropAnyView;
             else if (strValue.Equals("DROP PROFILE"))
-                enumValue = EPrivilege.DropProfile;
+                enumValue = ESysPrivilege.DropProfile;
             else if (strValue.Equals("DROP PUBLIC DATABASE LINK"))
-                enumValue = EPrivilege.DropPublicDatabaseLink;
+                enumValue = ESysPrivilege.DropPublicDatabaseLink;
             else if (strValue.Equals("DROP PUBLIC SYNONYM"))
-                enumValue = EPrivilege.DropPublicSynonym;
+                enumValue = ESysPrivilege.DropPublicSynonym;
             else if (strValue.Equals("DROP ROLLBACK SEGMENT"))
-                enumValue = EPrivilege.DropRollbackSegment;
+                enumValue = ESysPrivilege.DropRollbackSegment;
             else if (strValue.Equals("DROP TABLESPACE"))
-                enumValue = EPrivilege.DropTablespace;
+                enumValue = ESysPrivilege.DropTablespace;
             else if (strValue.Equals("DROP USER"))
-                enumValue = EPrivilege.DropUser;
+                enumValue = ESysPrivilege.DropUser;
             else if (strValue.Equals("ENQUEUE ANY QUEUE"))
-                enumValue = EPrivilege.EnqueueAnyQueue;
+                enumValue = ESysPrivilege.EnqueueAnyQueue;
             else if (strValue.Equals("EXECUTE ANY CLASS"))
-                enumValue = EPrivilege.ExecuteAnyClass;
+                enumValue = ESysPrivilege.ExecuteAnyClass;
             else if (strValue.Equals("EXECUTE ANY EVALUATION CONTEXT"))
-                enumValue = EPrivilege.ExecuteAnyEvaluationContext;
+                enumValue = ESysPrivilege.ExecuteAnyEvaluationContext;
             else if (strValue.Equals("EXECUTE ANY INDEXTYPE"))
-                enumValue = EPrivilege.ExecuteAnyIndextype;
+                enumValue = ESysPrivilege.ExecuteAnyIndextype;
             else if (strValue.Equals("EXECUTE ANY LIBRARY"))
-                enumValue = EPrivilege.ExecuteAnyLibrary;
+                enumValue = ESysPrivilege.ExecuteAnyLibrary;
             else if (strValue.Equals("EXECUTE ANY OPERATOR"))
-                enumValue = EPrivilege.ExecuteAnyOperator;
+                enumValue = ESysPrivilege.ExecuteAnyOperator;
             else if (strValue.Equals("EXECUTE ANY PROCEDURE"))
-                enumValue = EPrivilege.ExecuteAnyProcedure;
+                enumValue = ESysPrivilege.ExecuteAnyProcedure;
             else if (strValue.Equals("EXECUTE ANY PROGRAM"))
-                enumValue = EPrivilege.ExecuteAnyProgram;
+                enumValue = ESysPrivilege.ExecuteAnyProgram;
             else if (strValue.Equals("EXECUTE ANY RULE"))
-                enumValue = EPrivilege.ExecuteAnyRule;
+                enumValue = ESysPrivilege.ExecuteAnyRule;
             else if (strValue.Equals("EXECUTE ANY RULE SET"))
-                enumValue = EPrivilege.ExecuteAnyRuleSet;
+                enumValue = ESysPrivilege.ExecuteAnyRuleSet;
             else if (strValue.Equals("EXECUTE ANY TYPE"))
-                enumValue = EPrivilege.ExecuteAnyType;
+                enumValue = ESysPrivilege.ExecuteAnyType;
             else if (strValue.Equals("EXEMPT ACCESS POLICY"))
-                enumValue = EPrivilege.ExemptAccessPolicy;
+                enumValue = ESysPrivilege.ExemptAccessPolicy;
             else if (strValue.Equals("EXEMPT IDENTITY POLICY"))
-                enumValue = EPrivilege.ExemptIdentityPolicy;
+                enumValue = ESysPrivilege.ExemptIdentityPolicy;
             else if (strValue.Equals("EXPORT FULL DATABASE"))
-                enumValue = EPrivilege.ExportFullDatabase;
+                enumValue = ESysPrivilege.ExportFullDatabase;
             else if (strValue.Equals("FLASHBACK ANY TABLE"))
-                enumValue = EPrivilege.FlashbackAnyTable;
+                enumValue = ESysPrivilege.FlashbackAnyTable;
             else if (strValue.Equals("FORCE ANY TRANSACTION"))
-                enumValue = EPrivilege.ForceAnyTransaction;
+                enumValue = ESysPrivilege.ForceAnyTransaction;
             else if (strValue.Equals("FORCE TRANSACTION"))
-                enumValue = EPrivilege.ForceTransaction;
+                enumValue = ESysPrivilege.ForceTransaction;
             else if (strValue.Equals("GLOBAL QUERY REWRITE"))
-                enumValue = EPrivilege.GlobalQueryRewrite;
+                enumValue = ESysPrivilege.GlobalQueryRewrite;
             else if (strValue.Equals("GRANT ANY OBJECT PRIVILEGE"))
-                enumValue = EPrivilege.GrantAnyObjectPrivilege;
+                enumValue = ESysPrivilege.GrantAnyObjectPrivilege;
             else if (strValue.Equals("GRANT ANY PRIVILEGE"))
-                enumValue = EPrivilege.GrantAnyPrivilege;
+                enumValue = ESysPrivilege.GrantAnyPrivilege;
             else if (strValue.Equals("GRANT ANY ROLE"))
-                enumValue = EPrivilege.GrantAnyRole;
+                enumValue = ESysPrivilege.GrantAnyRole;
             else if (strValue.Equals("IMPORT FULL DATABASE"))
-                enumValue = EPrivilege.ImportFullDatabase;
+                enumValue = ESysPrivilege.ImportFullDatabase;
             else if (strValue.Equals("INSERT ANY TABLE"))
-                enumValue = EPrivilege.InsertAnyTable;
+                enumValue = ESysPrivilege.InsertAnyTable;
             else if (strValue.Equals("LOCK ANY TABLE"))
-                enumValue = EPrivilege.LockAnyTable;
+                enumValue = ESysPrivilege.LockAnyTable;
             else if (strValue.Equals("MANAGE ANY FILE GROUP"))
-                enumValue = EPrivilege.ManageAnyFileGroup;
+                enumValue = ESysPrivilege.ManageAnyFileGroup;
             else if (strValue.Equals("MANAGE ANY QUEUE"))
-                enumValue = EPrivilege.ManageAnyQueue;
+                enumValue = ESysPrivilege.ManageAnyQueue;
             else if (strValue.Equals("MANAGE FILE GROUP"))
-                enumValue = EPrivilege.ManageFileGroup;
+                enumValue = ESysPrivilege.ManageFileGroup;
             else if (strValue.Equals("MANAGE SCHEDULER"))
-                enumValue = EPrivilege.ManageScheduler;
+                enumValue = ESysPrivilege.ManageScheduler;
             else if (strValue.Equals("MANAGE TABLESPACE"))
-                enumValue = EPrivilege.ManageTablespace;
+                enumValue = ESysPrivilege.ManageTablespace;
             else if (strValue.Equals("MERGE ANY VIEW"))
-                enumValue = EPrivilege.MergeAnyView;
+                enumValue = ESysPrivilege.MergeAnyView;
             else if (strValue.Equals("ON COMMIT REFRESH"))
-                enumValue = EPrivilege.OnCommitRefresh;
+                enumValue = ESysPrivilege.OnCommitRefresh;
             else if (strValue.Equals("QUERY REWRITE"))
-                enumValue = EPrivilege.QueryRewrite;
+                enumValue = ESysPrivilege.QueryRewrite;
             else if (strValue.Equals("READ ANY FILE GROUP"))
-                enumValue = EPrivilege.ReadAnyFileGroup;
+                enumValue = ESysPrivilege.ReadAnyFileGroup;
             else if (strValue.Equals("RESTRICTED SESSION"))
-                enumValue = EPrivilege.RestrictedSession;
+                enumValue = ESysPrivilege.RestrictedSession;
             else if (strValue.Equals("RESUMABLE"))
-                enumValue = EPrivilege.Resumable;
+                enumValue = ESysPrivilege.Resumable;
             else if (strValue.Equals("SELECT ANY DICTIONARY"))
-                enumValue = EPrivilege.SelectAnyDictionary;
+                enumValue = ESysPrivilege.SelectAnyDictionary;
             else if (strValue.Equals("SELECT ANY SEQUENCE"))
-                enumValue = EPrivilege.SelectAnySequence;
+                enumValue = ESysPrivilege.SelectAnySequence;
             else if (strValue.Equals("SELECT ANY TABLE"))
-                enumValue = EPrivilege.SelectAnyTable;
+                enumValue = ESysPrivilege.SelectAnyTable;
             else if (strValue.Equals("SELECT ANY TRANSACTION"))
-                enumValue = EPrivilege.SelectAnyTransaction;
+                enumValue = ESysPrivilege.SelectAnyTransaction;
             else if (strValue.Equals("SYSDBA"))
-                enumValue = EPrivilege.Sysdba;
+                enumValue = ESysPrivilege.Sysdba;
             else if (strValue.Equals("SYSOPER"))
-                enumValue = EPrivilege.Sysoper;
+                enumValue = ESysPrivilege.Sysoper;
             else if (strValue.Equals("UNDER ANY TABLE"))
-                enumValue = EPrivilege.UnderAnyTable;
+                enumValue = ESysPrivilege.UnderAnyTable;
             else if (strValue.Equals("UNDER ANY TYPE"))
-                enumValue = EPrivilege.UnderAnyType;
+                enumValue = ESysPrivilege.UnderAnyType;
             else if (strValue.Equals("UNDER ANY VIEW"))
-                enumValue = EPrivilege.UnderAnyView;
+                enumValue = ESysPrivilege.UnderAnyView;
             else if (strValue.Equals("UNLIMITED TABLESPACE"))
-                enumValue = EPrivilege.UnlimitedTablespace;
+                enumValue = ESysPrivilege.UnlimitedTablespace;
             else if (strValue.Equals("UPDATE ANY TABLE"))
-                enumValue = EPrivilege.UpdateAnyTable;
+                enumValue = ESysPrivilege.UpdateAnyTable;
             else
-                enumValue = EPrivilege.Unknown;
+                enumValue = ESysPrivilege.Unknown;
 
             #endregion
 
@@ -467,348 +467,348 @@ namespace oradmin
         #endregion
     }
 
-    public class EPrivilegeToStringConverter : EnumToStringConverter<EPrivilege>
+    public class EPrivilegeToStringConverter : EnumToStringConverter<ESysPrivilege>
     {
 
         #region EnumToStringConverter<EPrivilege> Members
 
-        public string EnumValueToString(EPrivilege value, object parameter)
+        public string EnumValueToString(ESysPrivilege value, object parameter)
         {
             switch (value)
             {
                 #region Enum to string branching
 
-                case EPrivilege.AdministerAnySqlTuningSet:
+                case ESysPrivilege.AdministerAnySqlTuningSet:
                     return "ADMINISTER ANY SQL TUNING SET";
-                case EPrivilege.AdministerDatabaseTrigger:
+                case ESysPrivilege.AdministerDatabaseTrigger:
                     return "ADMINISTER DATABASE TRIGGER";
-                case EPrivilege.AdministerResourceManager:
+                case ESysPrivilege.AdministerResourceManager:
                     return "ADMINISTER RESOURCE MANAGER";
-                case EPrivilege.AdministerSqlTuningSet:
+                case ESysPrivilege.AdministerSqlTuningSet:
                     return "ADMINISTER SQL TUNING SET";
-                case EPrivilege.Advisor:
+                case ESysPrivilege.Advisor:
                     return "ADVISOR";
-                case EPrivilege.AlterAnyCluster:
+                case ESysPrivilege.AlterAnyCluster:
                     return "ALTER ANY CLUSTER";
-                case EPrivilege.AlterAnyDimension:
+                case ESysPrivilege.AlterAnyDimension:
                     return "ALTER ANY DIMENSION";
-                case EPrivilege.AlterAnyEvaluationContext:
+                case ESysPrivilege.AlterAnyEvaluationContext:
                     return "ALTER ANY EVALUATION CONTEXT";
-                case EPrivilege.AlterAnyIndex:
+                case ESysPrivilege.AlterAnyIndex:
                     return "ALTER ANY INDEX";
-                case EPrivilege.AlterAnyIndextype:
+                case ESysPrivilege.AlterAnyIndextype:
                     return "ALTER ANY INDEXTYPE";
-                case EPrivilege.AlterAnyLibrary:
+                case ESysPrivilege.AlterAnyLibrary:
                     return "ALTER ANY LIBRARY";
-                case EPrivilege.AlterAnyMaterializedView:
+                case ESysPrivilege.AlterAnyMaterializedView:
                     return "ALTER ANY MATERIALIZED VIEW";
-                case EPrivilege.AlterAnyOperator:
+                case ESysPrivilege.AlterAnyOperator:
                     return "ALTER ANY OPERATOR";
-                case EPrivilege.AlterAnyOutline:
+                case ESysPrivilege.AlterAnyOutline:
                     return "ALTER ANY OUTLINE";
-                case EPrivilege.AlterAnyProcedure:
+                case ESysPrivilege.AlterAnyProcedure:
                     return "ALTER ANY PROCEDURE";
-                case EPrivilege.AlterAnyRole:
+                case ESysPrivilege.AlterAnyRole:
                     return "ALTER ANY ROLE";
-                case EPrivilege.AlterAnyRule:
+                case ESysPrivilege.AlterAnyRule:
                     return "ALTER ANY RULE";
-                case EPrivilege.AlterAnyRuleSet:
+                case ESysPrivilege.AlterAnyRuleSet:
                     return "ALTER ANY RULE SET";
-                case EPrivilege.AlterAnySequence:
+                case ESysPrivilege.AlterAnySequence:
                     return "ALTER ANY SEQUENCE";
-                case EPrivilege.AlterAnySqlProfile:
+                case ESysPrivilege.AlterAnySqlProfile:
                     return "ALTER ANY SQL PROFILE";
-                case EPrivilege.AlterAnyTable:
+                case ESysPrivilege.AlterAnyTable:
                     return "ALTER ANY TABLE";
-                case EPrivilege.AlterAnyTrigger:
+                case ESysPrivilege.AlterAnyTrigger:
                     return "ALTER ANY TRIGGER";
-                case EPrivilege.AlterAnyType:
+                case ESysPrivilege.AlterAnyType:
                     return "ALTER ANY TYPE";
-                case EPrivilege.AlterDatabase:
+                case ESysPrivilege.AlterDatabase:
                     return "ALTER DATABASE";
-                case EPrivilege.AlterProfile:
+                case ESysPrivilege.AlterProfile:
                     return "ALTER PROFILE";
-                case EPrivilege.AlterResourceCost:
+                case ESysPrivilege.AlterResourceCost:
                     return "ALTER RESOURCE COST";
-                case EPrivilege.AlterRollbackSegment:
+                case ESysPrivilege.AlterRollbackSegment:
                     return "ALTER ROLLBACK SEGMENT";
-                case EPrivilege.AlterSession:
+                case ESysPrivilege.AlterSession:
                     return "ALTER SESSION";
-                case EPrivilege.AlterSystem:
+                case ESysPrivilege.AlterSystem:
                     return "ALTER SYSTEM";
-                case EPrivilege.AlterTablespace:
+                case ESysPrivilege.AlterTablespace:
                     return "ALTER TABLESPACE";
-                case EPrivilege.AlterUser:
+                case ESysPrivilege.AlterUser:
                     return "ALTER USER";
-                case EPrivilege.AnalyzeAny:
+                case ESysPrivilege.AnalyzeAny:
                     return "ANALYZE ANY";
-                case EPrivilege.AnalyzeAnyDictionary:
+                case ESysPrivilege.AnalyzeAnyDictionary:
                     return "ANALYZE ANY DICTIONARY";
-                case EPrivilege.AuditAny:
+                case ESysPrivilege.AuditAny:
                     return "AUDIT ANY";
-                case EPrivilege.AuditSystem:
+                case ESysPrivilege.AuditSystem:
                     return "AUDIT SYSTEM";
-                case EPrivilege.BackupAnyTable:
+                case ESysPrivilege.BackupAnyTable:
                     return "BACKUP ANY TABLE";
-                case EPrivilege.BecomeUser:
+                case ESysPrivilege.BecomeUser:
                     return "BECOME USER";
-                case EPrivilege.ChangeNotification:
+                case ESysPrivilege.ChangeNotification:
                     return "CHANGE NOTIFICATION";
-                case EPrivilege.CommentAnyTable:
+                case ESysPrivilege.CommentAnyTable:
                     return "COMMENT ANY TABLE";
-                case EPrivilege.CreateAnyCluster:
+                case ESysPrivilege.CreateAnyCluster:
                     return "CREATE ANY CLUSTER";
-                case EPrivilege.CreateAnyContext:
+                case ESysPrivilege.CreateAnyContext:
                     return "CREATE ANY CONTEXT";
-                case EPrivilege.CreateAnyDimension:
+                case ESysPrivilege.CreateAnyDimension:
                     return "CREATE ANY DIMENSION";
-                case EPrivilege.CreateAnyDirectory:
+                case ESysPrivilege.CreateAnyDirectory:
                     return "CREATE ANY DIRECTORY";
-                case EPrivilege.CreateAnyEvaluationContext:
+                case ESysPrivilege.CreateAnyEvaluationContext:
                     return "CREATE ANY EVALUATION CONTEXT";
-                case EPrivilege.CreateAnyIndex:
+                case ESysPrivilege.CreateAnyIndex:
                     return "CREATE ANY INDEX";
-                case EPrivilege.CreateAnyIndextype:
+                case ESysPrivilege.CreateAnyIndextype:
                     return "CREATE ANY INDEXTYPE";
-                case EPrivilege.CreateAnyJob:
+                case ESysPrivilege.CreateAnyJob:
                     return "CREATE ANY JOB";
-                case EPrivilege.CreateAnyLibrary:
+                case ESysPrivilege.CreateAnyLibrary:
                     return "CREATE ANY LIBRARY";
-                case EPrivilege.CreateAnyMaterializedView:
+                case ESysPrivilege.CreateAnyMaterializedView:
                     return "CREATE ANY MATERIALIZED VIEW";
-                case EPrivilege.CreateAnyOperator:
+                case ESysPrivilege.CreateAnyOperator:
                     return "CREATE ANY OPERATOR";
-                case EPrivilege.CreateAnyOutline:
+                case ESysPrivilege.CreateAnyOutline:
                     return "CREATE ANY OUTLINE";
-                case EPrivilege.CreateAnyProcedure:
+                case ESysPrivilege.CreateAnyProcedure:
                     return "CREATE ANY PROCEDURE";
-                case EPrivilege.CreateAnyRule:
+                case ESysPrivilege.CreateAnyRule:
                     return "CREATE ANY RULE";
-                case EPrivilege.CreateAnyRuleSet:
+                case ESysPrivilege.CreateAnyRuleSet:
                     return "CREATE ANY RULE SET";
-                case EPrivilege.CreateAnySequence:
+                case ESysPrivilege.CreateAnySequence:
                     return "CREATE ANY SEQUENCE";
-                case EPrivilege.CreateAnySqlProfile:
+                case ESysPrivilege.CreateAnySqlProfile:
                     return "CREATE ANY SQL PROFILE";
-                case EPrivilege.CreateAnySynonym:
+                case ESysPrivilege.CreateAnySynonym:
                     return "CREATE ANY SYNONYM";
-                case EPrivilege.CreateAnyTable:
+                case ESysPrivilege.CreateAnyTable:
                     return "CREATE ANY TABLE";
-                case EPrivilege.CreateAnyTrigger:
+                case ESysPrivilege.CreateAnyTrigger:
                     return "CREATE ANY TRIGGER";
-                case EPrivilege.CreateAnyType:
+                case ESysPrivilege.CreateAnyType:
                     return "CREATE ANY TYPE";
-                case EPrivilege.CreateAnyView:
+                case ESysPrivilege.CreateAnyView:
                     return "CREATE ANY VIEW";
-                case EPrivilege.CreateCluster:
+                case ESysPrivilege.CreateCluster:
                     return "CREATE CLUSTER";
-                case EPrivilege.CreateDatabaseLink:
+                case ESysPrivilege.CreateDatabaseLink:
                     return "CREATE DATABASE LINK";
-                case EPrivilege.CreateDimension:
+                case ESysPrivilege.CreateDimension:
                     return "CREATE DIMENSION";
-                case EPrivilege.CreateEvaluationContext:
+                case ESysPrivilege.CreateEvaluationContext:
                     return "CREATE EVALUATION CONTEXT";
-                case EPrivilege.CreateExternalJob:
+                case ESysPrivilege.CreateExternalJob:
                     return "CREATE EXTERNAL JOB";
-                case EPrivilege.CreateIndextype:
+                case ESysPrivilege.CreateIndextype:
                     return "CREATE INDEXTYPE";
-                case EPrivilege.CreateJob:
+                case ESysPrivilege.CreateJob:
                     return "CREATE JOB";
-                case EPrivilege.CreateLibrary:
+                case ESysPrivilege.CreateLibrary:
                     return "CREATE LIBRARY";
-                case EPrivilege.CreateMaterializedView:
+                case ESysPrivilege.CreateMaterializedView:
                     return "CREATE MATERIALIZED VIEW";
-                case EPrivilege.CreateOperator:
+                case ESysPrivilege.CreateOperator:
                     return "CREATE OPERATOR";
-                case EPrivilege.CreateProcedure:
+                case ESysPrivilege.CreateProcedure:
                     return "CREATE PROCEDURE";
-                case EPrivilege.CreateProfile:
+                case ESysPrivilege.CreateProfile:
                     return "CREATE PROFILE";
-                case EPrivilege.CreatePublicDatabaseLink:
+                case ESysPrivilege.CreatePublicDatabaseLink:
                     return "CREATE PUBLIC DATABASE LINK";
-                case EPrivilege.CreatePublicSynonym:
+                case ESysPrivilege.CreatePublicSynonym:
                     return "CREATE PUBLIC SYNONYM";
-                case EPrivilege.CreateRole:
+                case ESysPrivilege.CreateRole:
                     return "CREATE ROLE";
-                case EPrivilege.CreateRollbackSegment:
+                case ESysPrivilege.CreateRollbackSegment:
                     return "CREATE ROLLBACK SEGMENT";
-                case EPrivilege.CreateRule:
+                case ESysPrivilege.CreateRule:
                     return "CREATE RULE";
-                case EPrivilege.CreateRuleSet:
+                case ESysPrivilege.CreateRuleSet:
                     return "CREATE RULE SET";
-                case EPrivilege.CreateSequence:
+                case ESysPrivilege.CreateSequence:
                     return "CREATE SEQUENCE";
-                case EPrivilege.CreateSession:
+                case ESysPrivilege.CreateSession:
                     return "CREATE SESSION";
-                case EPrivilege.CreateSynonym:
+                case ESysPrivilege.CreateSynonym:
                     return "CREATE SYNONYM";
-                case EPrivilege.CreateTable:
+                case ESysPrivilege.CreateTable:
                     return "CREATE TABLE";
-                case EPrivilege.CreateTablespace:
+                case ESysPrivilege.CreateTablespace:
                     return "CREATE TABLESPACE";
-                case EPrivilege.CreateTrigger:
+                case ESysPrivilege.CreateTrigger:
                     return "CREATE TRIGGER";
-                case EPrivilege.CreateType:
+                case ESysPrivilege.CreateType:
                     return "CREATE TYPE";
-                case EPrivilege.CreateUser:
+                case ESysPrivilege.CreateUser:
                     return "CREATE USER";
-                case EPrivilege.CreateView:
+                case ESysPrivilege.CreateView:
                     return "CREATE VIEW";
-                case EPrivilege.DebugAnyProcedure:
+                case ESysPrivilege.DebugAnyProcedure:
                     return "DEBUG ANY PROCEDURE";
-                case EPrivilege.DebugConnectSession:
+                case ESysPrivilege.DebugConnectSession:
                     return "DEBUG CONNECT SESSION";
-                case EPrivilege.DeleteAnyTable:
+                case ESysPrivilege.DeleteAnyTable:
                     return "DELETE ANY TABLE";
-                case EPrivilege.DequeueAnyQueue:
+                case ESysPrivilege.DequeueAnyQueue:
                     return "DEQUEUE ANY QUEUE";
-                case EPrivilege.DropAnyCluster:
+                case ESysPrivilege.DropAnyCluster:
                     return "DROP ANY CLUSTER";
-                case EPrivilege.DropAnyContext:
+                case ESysPrivilege.DropAnyContext:
                     return "DROP ANY CONTEXT";
-                case EPrivilege.DropAnyDimension:
+                case ESysPrivilege.DropAnyDimension:
                     return "DROP ANY DIMENSION";
-                case EPrivilege.DropAnyDirectory:
+                case ESysPrivilege.DropAnyDirectory:
                     return "DROP ANY DIRECTORY";
-                case EPrivilege.DropAnyEvaluationContext:
+                case ESysPrivilege.DropAnyEvaluationContext:
                     return "DROP ANY EVALUATION CONTEXT";
-                case EPrivilege.DropAnyIndex:
+                case ESysPrivilege.DropAnyIndex:
                     return "DROP ANY INDEX";
-                case EPrivilege.DropAnyIndextype:
+                case ESysPrivilege.DropAnyIndextype:
                     return "DROP ANY INDEXTYPE";
-                case EPrivilege.DropAnyLibrary:
+                case ESysPrivilege.DropAnyLibrary:
                     return "DROP ANY LIBRARY";
-                case EPrivilege.DropAnyMaterializedView:
+                case ESysPrivilege.DropAnyMaterializedView:
                     return "DROP ANY MATERIALIZED VIEW";
-                case EPrivilege.DropAnyOperator:
+                case ESysPrivilege.DropAnyOperator:
                     return "DROP ANY OPERATOR";
-                case EPrivilege.DropAnyOutline:
+                case ESysPrivilege.DropAnyOutline:
                     return "DROP ANY OUTLINE";
-                case EPrivilege.DropAnyProcedure:
+                case ESysPrivilege.DropAnyProcedure:
                     return "DROP ANY PROCEDURE";
-                case EPrivilege.DropAnyRole:
+                case ESysPrivilege.DropAnyRole:
                     return "DROP ANY ROLE";
-                case EPrivilege.DropAnyRule:
+                case ESysPrivilege.DropAnyRule:
                     return "DROP ANY RULE";
-                case EPrivilege.DropAnyRuleSet:
+                case ESysPrivilege.DropAnyRuleSet:
                     return "DROP ANY RULE SET";
-                case EPrivilege.DropAnySequence:
+                case ESysPrivilege.DropAnySequence:
                     return "DROP ANY SEQUENCE";
-                case EPrivilege.DropAnySqlProfile:
+                case ESysPrivilege.DropAnySqlProfile:
                     return "DROP ANY SQL PROFILE";
-                case EPrivilege.DropAnySynonym:
+                case ESysPrivilege.DropAnySynonym:
                     return "DROP ANY SYNONYM";
-                case EPrivilege.DropAnyTable:
+                case ESysPrivilege.DropAnyTable:
                     return "DROP ANY TABLE";
-                case EPrivilege.DropAnyTrigger:
+                case ESysPrivilege.DropAnyTrigger:
                     return "DROP ANY TRIGGER";
-                case EPrivilege.DropAnyType:
+                case ESysPrivilege.DropAnyType:
                     return "DROP ANY TYPE";
-                case EPrivilege.DropAnyView:
+                case ESysPrivilege.DropAnyView:
                     return "DROP ANY VIEW";
-                case EPrivilege.DropProfile:
+                case ESysPrivilege.DropProfile:
                     return "DROP PROFILE";
-                case EPrivilege.DropPublicDatabaseLink:
+                case ESysPrivilege.DropPublicDatabaseLink:
                     return "DROP PUBLIC DATABASE LINK";
-                case EPrivilege.DropPublicSynonym:
+                case ESysPrivilege.DropPublicSynonym:
                     return "DROP PUBLIC SYNONYM";
-                case EPrivilege.DropRollbackSegment:
+                case ESysPrivilege.DropRollbackSegment:
                     return "DROP ROLLBACK SEGMENT";
-                case EPrivilege.DropTablespace:
+                case ESysPrivilege.DropTablespace:
                     return "DROP TABLESPACE";
-                case EPrivilege.DropUser:
+                case ESysPrivilege.DropUser:
                     return "DROP USER";
-                case EPrivilege.EnqueueAnyQueue:
+                case ESysPrivilege.EnqueueAnyQueue:
                     return "ENQUEUE ANY QUEUE";
-                case EPrivilege.ExecuteAnyClass:
+                case ESysPrivilege.ExecuteAnyClass:
                     return "EXECUTE ANY CLASS";
-                case EPrivilege.ExecuteAnyEvaluationContext:
+                case ESysPrivilege.ExecuteAnyEvaluationContext:
                     return "EXECUTE ANY EVALUATION CONTEXT";
-                case EPrivilege.ExecuteAnyIndextype:
+                case ESysPrivilege.ExecuteAnyIndextype:
                     return "EXECUTE ANY INDEXTYPE";
-                case EPrivilege.ExecuteAnyLibrary:
+                case ESysPrivilege.ExecuteAnyLibrary:
                     return "EXECUTE ANY LIBRARY";
-                case EPrivilege.ExecuteAnyOperator:
+                case ESysPrivilege.ExecuteAnyOperator:
                     return "EXECUTE ANY OPERATOR";
-                case EPrivilege.ExecuteAnyProcedure:
+                case ESysPrivilege.ExecuteAnyProcedure:
                     return "EXECUTE ANY PROCEDURE";
-                case EPrivilege.ExecuteAnyProgram:
+                case ESysPrivilege.ExecuteAnyProgram:
                     return "EXECUTE ANY PROGRAM";
-                case EPrivilege.ExecuteAnyRule:
+                case ESysPrivilege.ExecuteAnyRule:
                     return "EXECUTE ANY RULE";
-                case EPrivilege.ExecuteAnyRuleSet:
+                case ESysPrivilege.ExecuteAnyRuleSet:
                     return "EXECUTE ANY RULE SET";
-                case EPrivilege.ExecuteAnyType:
+                case ESysPrivilege.ExecuteAnyType:
                     return "EXECUTE ANY TYPE";
-                case EPrivilege.ExemptAccessPolicy:
+                case ESysPrivilege.ExemptAccessPolicy:
                     return "EXEMPT ACCESS POLICY";
-                case EPrivilege.ExemptIdentityPolicy:
+                case ESysPrivilege.ExemptIdentityPolicy:
                     return "EXEMPT IDENTITY POLICY";
-                case EPrivilege.ExportFullDatabase:
+                case ESysPrivilege.ExportFullDatabase:
                     return "EXPORT FULL DATABASE";
-                case EPrivilege.FlashbackAnyTable:
+                case ESysPrivilege.FlashbackAnyTable:
                     return "FLASHBACK ANY TABLE";
-                case EPrivilege.ForceAnyTransaction:
+                case ESysPrivilege.ForceAnyTransaction:
                     return "FORCE ANY TRANSACTION";
-                case EPrivilege.ForceTransaction:
+                case ESysPrivilege.ForceTransaction:
                     return "FORCE TRANSACTION";
-                case EPrivilege.GlobalQueryRewrite:
+                case ESysPrivilege.GlobalQueryRewrite:
                     return "GLOBAL QUERY REWRITE";
-                case EPrivilege.GrantAnyObjectPrivilege:
+                case ESysPrivilege.GrantAnyObjectPrivilege:
                     return "GRANT ANY OBJECT PRIVILEGE";
-                case EPrivilege.GrantAnyPrivilege:
+                case ESysPrivilege.GrantAnyPrivilege:
                     return "GRANT ANY PRIVILEGE";
-                case EPrivilege.GrantAnyRole:
+                case ESysPrivilege.GrantAnyRole:
                     return "GRANT ANY ROLE";
-                case EPrivilege.ImportFullDatabase:
+                case ESysPrivilege.ImportFullDatabase:
                     return "IMPORT FULL DATABASE";
-                case EPrivilege.InsertAnyTable:
+                case ESysPrivilege.InsertAnyTable:
                     return "INSERT ANY TABLE";
-                case EPrivilege.LockAnyTable:
+                case ESysPrivilege.LockAnyTable:
                     return "LOCK ANY TABLE";
-                case EPrivilege.ManageAnyFileGroup:
+                case ESysPrivilege.ManageAnyFileGroup:
                     return "MANAGE ANY FILE GROUP";
-                case EPrivilege.ManageAnyQueue:
+                case ESysPrivilege.ManageAnyQueue:
                     return "MANAGE ANY QUEUE";
-                case EPrivilege.ManageFileGroup:
+                case ESysPrivilege.ManageFileGroup:
                     return "MANAGE FILE GROUP";
-                case EPrivilege.ManageScheduler:
+                case ESysPrivilege.ManageScheduler:
                     return "MANAGE SCHEDULER";
-                case EPrivilege.ManageTablespace:
+                case ESysPrivilege.ManageTablespace:
                     return "MANAGE TABLESPACE";
-                case EPrivilege.MergeAnyView:
+                case ESysPrivilege.MergeAnyView:
                     return "MERGE ANY VIEW";
-                case EPrivilege.OnCommitRefresh:
+                case ESysPrivilege.OnCommitRefresh:
                     return "ON COMMIT REFRESH";
-                case EPrivilege.QueryRewrite:
+                case ESysPrivilege.QueryRewrite:
                     return "QUERY REWRITE";
-                case EPrivilege.ReadAnyFileGroup:
+                case ESysPrivilege.ReadAnyFileGroup:
                     return "READ ANY FILE GROUP";
-                case EPrivilege.RestrictedSession:
+                case ESysPrivilege.RestrictedSession:
                     return "RESTRICTED SESSION";
-                case EPrivilege.Resumable:
+                case ESysPrivilege.Resumable:
                     return "RESUMABLE";
-                case EPrivilege.SelectAnyDictionary:
+                case ESysPrivilege.SelectAnyDictionary:
                     return "SELECT ANY DICTIONARY";
-                case EPrivilege.SelectAnySequence:
+                case ESysPrivilege.SelectAnySequence:
                     return "SELECT ANY SEQUENCE";
-                case EPrivilege.SelectAnyTable:
+                case ESysPrivilege.SelectAnyTable:
                     return "SELECT ANY TABLE";
-                case EPrivilege.SelectAnyTransaction:
+                case ESysPrivilege.SelectAnyTransaction:
                     return "SELECT ANY TRANSACTION";
-                case EPrivilege.Sysdba:
+                case ESysPrivilege.Sysdba:
                     return "SYSDBA";
-                case EPrivilege.Sysoper:
+                case ESysPrivilege.Sysoper:
                     return "SYSOPER";
-                case EPrivilege.UnderAnyTable:
+                case ESysPrivilege.UnderAnyTable:
                     return "UNDER ANY TABLE";
-                case EPrivilege.UnderAnyType:
+                case ESysPrivilege.UnderAnyType:
                     return "UNDER ANY TYPE";
-                case EPrivilege.UnderAnyView:
+                case ESysPrivilege.UnderAnyView:
                     return "UNDER ANY VIEW";
-                case EPrivilege.UnlimitedTablespace:
+                case ESysPrivilege.UnlimitedTablespace:
                     return "UNLIMITED TABLESPACE";
-                case EPrivilege.UpdateAnyTable:
+                case ESysPrivilege.UpdateAnyTable:
                     return "UPDATE ANY TABLE";
 
                 #endregion
@@ -834,7 +834,7 @@ namespace oradmin
             specs.Add(typeof(EServerType), new EServerTypeToStringConverter());
             specs.Add(typeof(EDbaPrivileges), new EDbaPrivilegesToStringConverter());
             specs.Add(typeof(ENamingMethod), new ENamingMethodToStringConverter());
-            specs.Add(typeof(EPrivilege), new EPrivilegeToStringConverter());
+            specs.Add(typeof(ESysPrivilege), new EPrivilegeToStringConverter());
         }
 
         public static object GetConverter(Type type)

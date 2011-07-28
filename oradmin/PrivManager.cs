@@ -14,13 +14,7 @@ namespace oradmin
     public class PrivManager
     {
         #region Constants
-        const string CURRENT_USER_PRIVS_SELECT =
-            @"SELECT
-                grantee, privilege, admin_option
-              FROM
-                USER_SYS_PRIVS";
-
-        const string USERS_PRIVS_SELECT = @"
+        public static const string USERSROLES_PRIVS_SELECT = @"
             SELECT
                 grantee, privilege, admin_option
             FROM
@@ -34,12 +28,10 @@ namespace oradmin
         // connection handle
         OracleConnection conn;
         // list of privilege grants
-        List<GrantedPrivilege> currentUserGrants = new List<GrantedPrivilege>();
-        List<GrantedPrivilege> grants = new List<GrantedPrivilege>();
+        List<GrantedSysPrivilege> grants = new List<GrantedSysPrivilege>();
         #endregion
 
         #region Constructor
-
         public PrivManager(SessionManager.Session session)
         {
             if (session == null)
@@ -47,54 +39,38 @@ namespace oradmin
 
             this.session = session;
             this.conn = session.Connection;
-            // fill data
-            RefreshCurrentUserData();
-            RefreshUsersData();
         }
-
-        #endregion
-        #region Events
-        public event PrivilegeGrantsRefreshedHandler PrivilegeGrantsRefreshed;
-        #endregion
-
-        #region Properties
-        
         #endregion
 
         #region Public interface
-
         /// <summary>
         /// Refreshes information about all privilege grants
         /// </summary>
-        public void RefreshCurrentUserData()
-        {
-            currentUserGrants.Clear();
-
-            OracleCommand cmd = new OracleCommand(CURRENT_USER_PRIVS_SELECT, conn);
-            OracleDataReader odr = cmd.ExecuteReader();
-
-            while (odr.Read())
-            {
-                GrantedPrivilege grant = loadPrivilege(odr);
-                // insert him into list
-                currentUserGrants.Add(grant);
-            }
-        }
         public void RefreshUsersData()
         {
-            grants.Clear();
-
-            OracleCommand cmd = new OracleCommand(USERS_PRIVS_SELECT, conn);
+            refreshUserRoleData();
+        }
+        private void refreshUserRoleData()
+        {
+            OracleCommand cmd = new OracleCommand(USERSROLES_PRIVS_SELECT, conn);
             OracleDataReader odr = cmd.ExecuteReader();
+
+            if (odr.HasRows)
+                grants.Clear();
 
             while (odr.Read())
             {
-                GrantedPrivilege grant = loadPrivilege(odr);
+                GrantedSysPrivilege grant = loadPrivilege(odr);
                 grants.Add(grant);
             }
+        }
 
-            // notify users and roles
-            OnPrivilegeGrantsRefreshed();
+        /// <summary>
+        /// Queries for privileges of all roles
+        /// </summary>
+        public void RefreshRolesData()
+        {
+            refreshUserRoleData();
         }
         public UserPrivManagerLocal CreateUserPrivLocalManager(UserManager.User user)
         {
@@ -108,36 +84,29 @@ namespace oradmin
         {
             return new CurrentUserPrivManagerLocal(session, user);
         }
-        public 
         #endregion
 
         #region Protected interface
-
-        IEnumerable<GrantedPrivilege> downloadUserPrivileges(UserManager.User user)
+        protected IEnumerable<GrantedSysPrivilege> downloadUserRolePrivileges(UserRole userRole)
         {
             return
                  from grant in grants
-                    where grant.Grantee == user.Name
+                    where grant.Grantee == userRole.Name
                     select grant;
         }
-        IEnumerable<GrantedPrivilege> downloadCurrentUserPrivileges()
+        /// <summary>
+        /// ---TODO: return error code and string message (e.g. OracleException message?)
+        /// </summary>
+        /// <param name="grant"></param>
+        /// <returns></returns>
+        protected bool TryGrant(GrantedSysPrivilege grant)
         {
-            return
-                 from grant in currentUserGrants
-                 where grant.Grantee == session.CurrentUser.Name
-                 select grant;
-        }
-        IEnumerable<GrantedPrivilege> downloadRolePrivileges(RoleManager.Role role)
-        {
-            return
-                  from grant in grants
-                  where grant.Grantee == role.Name
-                  select grant;
+
         }
         #endregion
 
-        #region Helper methods
-        GrantedPrivilege loadPrivilege(OracleDataReader odr)
+        #region Public static interface
+        public static GrantedSysPrivilege loadPrivilege(OracleDataReader odr)
         {
             bool adminOption;
             EPrivilegeEnumConverter privConverter = new EPrivilegeEnumConverter();
@@ -157,20 +126,22 @@ namespace oradmin
             }
 
             // create new grant
-            return new GrantedPrivilege(
+            return new GrantedSysPrivilege(
                 odr.GetString(odr.GetOrdinal("grantee")),
-                (EPrivilege)privConverter.ConvertBack(odr.GetString(odr.GetOrdinal("privilege")), typeof(EPrivilege), null, System.Globalization.CultureInfo.CurrentCulture),
+                (ESysPrivilege)privConverter.ConvertBack(odr.GetString(odr.GetOrdinal("privilege")), typeof(ESysPrivilege), null, System.Globalization.CultureInfo.CurrentCulture),
                 adminOption,
                 true);
         }
-        void OnPrivilegeGrantsRefreshed()
-        {
-            if (PrivilegeGrantsRefreshed != null)
-            {
-                PrivilegeGrantsRefreshed();
-            }
-        }
         #endregion
+
+
+
+
+
+
+
+
+
 
         #region PrivManager inner class
 
@@ -181,10 +152,12 @@ namespace oradmin
         {
             #region Members
             protected SessionManager.Session session;
+            protected OracleConnection conn;
             protected PrivManager manager;
             protected UserRole userRole;
+            protected RoleManager.RoleManagerLocal localRoleManager;
             // list of privileges
-            protected ObservableCollection<GrantedPrivilege> privileges = new ObservableCollection<GrantedPrivilege>();
+            protected ObservableCollection<GrantedSysPrivilege> privileges = new ObservableCollection<GrantedSysPrivilege>();
             // default view of privileges
             protected ListCollectionView defaultView;
             #endregion
@@ -196,31 +169,83 @@ namespace oradmin
                     throw new ArgumentNullException("Session or User");
 
                 this.manager = session.PrivManager;
+                this.conn = session.Connection;
                 this.userRole = userRole;
+                this.localRoleManager = userRole.RoleManager;
                 // create privilege view
                 defaultView = CollectionViewSource.GetDefaultView(privileges) as ListCollectionView;
-                // download data from PrivManager
-                downloadPrivileges();
             }
 
             #endregion
             
             #region Helper methods
-            
-            void manager_PrivilegeGrantsRefreshed()
+            /// <summary>
+            /// Downloads privileges from session priv manager
+            /// </summary>
+            public virtual void DownloadPrivileges()
             {
-                downloadPrivileges();
+                privileges.Clear();
+                privileges.AddRange(manager.downloadUserRolePrivileges(userRole));
             }
-            protected abstract void downloadPrivileges();
+            // Downloads privileges from directly granted roles
+            public void RefreshPrivileges()
+            {
+                // get direct role grants from associated local role manager
+                ReadOnlyCollection<RoleGrant> directRoleGrants =
+                    localRoleManager.DirectRoleGrants;
+                // walk them and download role grants
+                foreach (RoleGrant grant in directRoleGrants)
+                {
+                    // get role reference
+                    RoleManager.Role grantedRole = grant.Role;
+                    // get all of its privilege grants
+                    ReadOnlyCollection<GrantedSysPrivilege> privs =
+                        grantedRole.PrivManager.PrivilegeGrants;
+                    // find those which are applicable for you and add them
+                    // to your privilege list
+                    addInheritedGrants(privs);
+                }
+            }
+            // adds inherited grants (removes duplicities?)
+            private void addInheritedGrants(ReadOnlyCollection<GrantedSysPrivilege> privs)
+            {
+                foreach (GrantedSysPrivilege grant in privs)
+                {
+                    // create own downloaded grant info
+                    GrantedSysPrivilege downloaded =
+                        new GrantedSysPrivilege(userRole.Name, grant.Privilege, false, false);
+                    // insert it
+                    privileges.Add(downloaded);
+                }
+            }
+            public bool Grant(GrantedSysPrivilege grant, bool adminOption)
+            {
+                //---TODO: kontrola, zda jiz neni prideleno???---
+
+                // create a grant for user or role
+                GrantedSysPrivilege newGrant = grant.CreateGrant(userRole, adminOption);
+                // try to perform it via session-level priv manager
+                if (!manager.TryGrant(newGrant))
+                {
+                    return false;
+                }
+                
+                // grant succeeded, add it to the collection and notify RoleManager
+                // about a change to perform change distribution
+                privileges.Add(newGrant);
+
+            }
             #endregion
 
             #region Properties
-
-            ListCollectionView DefaultView
+            ListCollectionView Privileges
             {
                 get { return defaultView; }
             }
-
+            ReadOnlyCollection<GrantedSysPrivilege> PrivilegeGrants
+            {
+                get { return privileges.ToList<GrantedSysPrivilege>().AsReadOnly(); }
+            }
             #endregion
         }
         /// <summary>
@@ -235,12 +260,6 @@ namespace oradmin
             { }
 
             #endregion
-
-            protected override void downloadPrivileges()
-            {
-                privileges.Clear();
-                manager.downloadUserPrivileges(userRole as UserManager.User);
-            }
         }
         /// <summary>
         /// Local privilege manager for roles
@@ -248,44 +267,60 @@ namespace oradmin
         public class RolePrivManagerLocal : PrivManagerLocal
         {
             #region Constructor
-
             public RolePrivManagerLocal(SessionManager.Session session, RoleManager.Role role) :
                 base(session, role)
             { }
-
             #endregion
-            protected override void downloadPrivileges()
-            {
-                privileges.Clear();
-                manager.downloadRolePrivileges(userRole as RoleManager.Role);
-            }
+            
         }
 
         public class CurrentUserPrivManagerLocal : UserPrivManagerLocal
         {
-            #region Constructor
+            #region SQL SELECTS
+            const string CURRENT_USER_PRIVS_SELECT = @"
+              SELECT
+                grantee, privilege, admin_option
+              FROM
+                USER_SYS_PRIVS";
+            #endregion
 
+            #region Constructor
             public CurrentUserPrivManagerLocal(SessionManager.Session session,
                                                UserManager.CurrentUser user) :
                 base(session, user)
             { }
-
             #endregion
 
-            #region Helper methods
-
-            protected override void downloadPrivileges()
+            public override void DownloadPrivileges()
             {
-                privileges.Clear();
-                privileges.AddRange(manager.downloadCurrentUserPrivileges());
-            }
+                IEnumerable<GrantedSysPrivilege> newPrivs =
+                    manager.downloadUserRolePrivileges(userRole);
 
-            #endregion
+                if (newPrivs.Count() > 0)
+                {
+                    privileges.Clear();
+                    privileges.AddRange(newPrivs);
+                } else
+                {
+                    OracleCommand cmd = new OracleCommand(CURRENT_USER_PRIVS_SELECT, conn);
+                    OracleDataReader odr = cmd.ExecuteReader();
+
+                    if (odr.HasRows)
+                        privileges.Clear();
+
+                    while (odr.Read())
+                    {
+                        GrantedSysPrivilege grant = PrivManager.loadPrivilege(odr);
+                        // add it
+                        privileges.Add(grant);
+                    }
+                }
+            }
         }
         #endregion
     }
 
-    public enum EPrivilege
+    public enum ESysPrivilege
     {
         AdministerAnySqlTuningSet,
         AdministerDatabaseTrigger,

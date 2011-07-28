@@ -16,6 +16,7 @@ namespace oradmin
         bool adminOption;
         bool directGrant;
         bool defaultRole;
+        bool active;
 
         #endregion
 
@@ -32,16 +33,16 @@ namespace oradmin
             this.directGrant = directGrant;
             this.defaultRole = defaultRole;
         }
-        public RoleGrant(RoleGrant grant, RoleManager.Role role)
+        public RoleGrant(RoleGrant grant, string grantee, bool adminOption)
         {
-            if(grant == null || role == null)
-                throw new ArgumentNullException("Grant or role");
+            if(grant == null)
+                throw new ArgumentNullException("Grant");
 
-            this.grantee = grant.Grantee;
+            this.grantee = grantee;
             this.grantedRole = grant.GrantedRole;
-            this.adminOption = false;
+            this.adminOption = adminOption;
             this.weakReference = false;
-            this.roleReference = role;
+            this.roleReference = grant.Role;
             this.directGrant = false;
             this.defaultRole = false;
         }
@@ -82,6 +83,11 @@ namespace oradmin
         public bool DefaultRole
         {
             get { return defaultRole; }
+        }
+        public bool Active
+        {
+            get { return active; }
+            set { active = value; }
         }
         #endregion
 

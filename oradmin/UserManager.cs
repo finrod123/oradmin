@@ -12,21 +12,12 @@ namespace oradmin
     public class UserManager
     {
         #region Static members
-
-        public const string CURRENT_USER_SELECT = @"
-                  SELECT
-                    user_id, default_tablespace, temporary_tablespace,
-                    created, expiry_date
-                  FROM
-                    USER_USERS";
-        
-        const string USERS_SELECT = @"
+        public static const string USERS_SELECT = @"
                   SELECT
                     user_id, username, default_tablespace, temporary_tablespace,
                     created, expiry_date
                   FROM
                     DBA_USERS";
-
         #endregion
 
         #region Members
@@ -154,7 +145,6 @@ namespace oradmin
             readonly decimal id;
             object defaultTablespace, temporaryTablespace;
             DateTime? expiryDate, created;
-
             #endregion
 
             #region Constructor
@@ -178,7 +168,6 @@ namespace oradmin
             #endregion
 
             #region Properties
-
             public string Name
             {
                 get { return name; }
@@ -208,18 +197,20 @@ namespace oradmin
                 get { return temporaryTablespace; }
                 set { temporaryTablespace = value; }
             }
-
+            public override bool IsIndependent
+            {
+                get { return false; }
+            }
             #endregion
 
             #region Helper methods
-            
             protected virtual void createManagers()
             {
-                // create priv manager
+                // create local priv manager
                 privManager = session.PrivManager.CreateUserPrivLocalManager(this);
-                // create role manager
+                // create local role manager
+                roleManager = userRoleManager.CreateUserLocalManager(this);
             }
-
             #endregion
         }
 
@@ -229,8 +220,16 @@ namespace oradmin
 
         public class CurrentUser : User
         {
-            #region Constructor
+            #region SQL SELECTS
+            public static const string CURRENT_USER_SELECT = @"
+                  SELECT
+                    user_id, default_tablespace, temporary_tablespace,
+                    created, expiry_date
+                  FROM
+                    USER_USERS";
+            #endregion
 
+            #region Constructor
             public CurrentUser(
                         decimal id, string name,
                         object defaultTablespace, object temporaryTablespace,
@@ -238,19 +237,16 @@ namespace oradmin
                         SessionManager.Session session) :
                 base(id, name, defaultTablespace, temporaryTablespace, created, expiryDate, session)
             { }
-
             #endregion
 
             #region Helper methods
-
             protected override void createManagers()
             {
                 // create priv manager for current user
                 privManager = session.PrivManager.CreateCurrentUserPrivManagerLocal(this);
                 // create role manager for current user
-
+                roleManager = userRoleManager.CreateCurrentUserLocalManager(this);
             }
-
             #endregion
         }
 

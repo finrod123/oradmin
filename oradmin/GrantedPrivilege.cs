@@ -5,56 +5,33 @@ using System.Text;
 
 namespace oradmin
 {
-    public class GrantedPrivilege
+    public class GrantedSysPrivilege
     {
         #region Members
-
         string grantee;
-        EPrivilege privilege;
+        ESysPrivilege privilege;
         bool admin;
 
-        string grantor;
-        UserManager.User grantorRef;
         bool directGrant;
-
         #endregion
 
         #region Constructor
-
-        public GrantedPrivilege(string grantee, EPrivilege privilege,
-                                bool admin, bool directGrant) :
-            this(grantee, privilege, admin, directGrant, string.Empty, null)
-        { }
-
-        public GrantedPrivilege(string grantee, EPrivilege privilege,
-                                string grantor, UserManager.User grantorRef) :
-            this(grantee, privilege, false, false, grantor, grantorRef)
-        { }
-
-        private GrantedPrivilege(string grantee, EPrivilege privilege,
-                                bool admin, bool directGrant,
-                                string grantor, UserManager.User grantorRef)
+        public GrantedSysPrivilege(string grantee, ESysPrivilege privilege,
+                                bool admin, bool directGrant)
         {
             this.grantee = grantee;
             this.privilege = privilege;
             this.admin = admin;
             this.directGrant = directGrant;
-            this.grantor = grantor;
-            this.grantorRef = grantorRef;
         }
         #endregion
 
         #region Properties
-
         public string Grantee
         {
             get { return grantee; }
         }
-        public string Grantor
-        {
-            get { return grantor; }
-        }
-        public EPrivilege Privilege
+        public ESysPrivilege Privilege
         {
             get { return privilege; }
         }
@@ -66,7 +43,13 @@ namespace oradmin
         {
             get { return directGrant; }
         }
+        #endregion
 
+        #region Public interface
+        public GrantedSysPrivilege CreateGrant(UserRole userRole, bool adminOption)
+        {
+            return new GrantedSysPrivilege(userRole.Name, privilege, adminOption, true);
+        }
         #endregion
     }
 }

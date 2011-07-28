@@ -94,6 +94,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ColPrivManager.cs" />
     <Compile Include="ConnectDescriptor.cs" />
     <Compile Include="ConnectDescriptorDisplay.xaml.cs">
       <DependentUpon>ConnectDescriptorDisplay.xaml</DependentUpon>
@@ -105,7 +106,10 @@
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="Converters.cs" />
     <Compile Include="EnumConverters.cs" />
+    <Compile Include="GrantedColPrivilege.cs" />
     <Compile Include="GrantedPrivilege.cs" />
+    <Compile Include="GrantedTabPrivilege.cs" />
+    <Compile Include="ObjectPrivManager.cs" />
     <Compile Include="ObservableCollection.cs" />
     <Compile Include="PrivManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
