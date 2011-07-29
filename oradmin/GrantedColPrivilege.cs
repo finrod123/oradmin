@@ -5,7 +5,7 @@ using System.Text;
 
 namespace oradmin
 {
-    class GrantedColPrivilege
+    public class GrantedColPrivilege : PrivilegeBase
     {
         #region Members
         string grantee;

@@ -95,6 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ColPrivManager.cs" />
+    <Compile Include="ColumnManager.cs" />
     <Compile Include="ConnectDescriptor.cs" />
     <Compile Include="ConnectDescriptorDisplay.xaml.cs">
       <DependentUpon>ConnectDescriptorDisplay.xaml</DependentUpon>
@@ -104,13 +105,16 @@
       <DependentUpon>ConnectionDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="ConnectionManager.cs" />
+    <Compile Include="ConstraintManager.cs" />
     <Compile Include="Converters.cs" />
     <Compile Include="EnumConverters.cs" />
     <Compile Include="GrantedColPrivilege.cs" />
     <Compile Include="GrantedPrivilege.cs" />
     <Compile Include="GrantedTabPrivilege.cs" />
+    <Compile Include="IndexManager.cs" />
     <Compile Include="ObjectPrivManager.cs" />
     <Compile Include="ObservableCollection.cs" />
+    <Compile Include="PrivilegeBase.cs" />
     <Compile Include="PrivManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
@@ -125,11 +129,15 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="QuotasManager.cs" />
+    <Compile Include="ResourceLimitManager.cs" />
     <Compile Include="RoleDependencyManager.cs" />
     <Compile Include="RoleGrant.cs" />
     <Compile Include="RoleManager.cs" />
+    <Compile Include="SchemaManager.cs" />
     <Compile Include="SequenceGenerator.cs" />
     <Compile Include="SessionManager.cs" />
+    <Compile Include="TableManager.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserManager.cs" />
     <Compile Include="UserRole.cs" />

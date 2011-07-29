@@ -17,7 +17,6 @@ namespace oradmin
                 grantor, privilege, grantable
             FROM
                 DBA_TAB_PRIVS";
-                
         #endregion
         SessionManager.Session session;
         OracleConnection conn;

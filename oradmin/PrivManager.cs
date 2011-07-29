@@ -128,9 +128,9 @@ namespace oradmin
             // create new grant
             return new GrantedSysPrivilege(
                 odr.GetString(odr.GetOrdinal("grantee")),
+                odr.GetString(odr.GetOrdinal("grantee")),
                 (ESysPrivilege)privConverter.ConvertBack(odr.GetString(odr.GetOrdinal("privilege")), typeof(ESysPrivilege), null, System.Globalization.CultureInfo.CurrentCulture),
-                adminOption,
-                true);
+                adminOption);
         }
         #endregion
 

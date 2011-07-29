@@ -71,6 +71,7 @@ namespace oradmin
             UserManager userManager;
             RoleManager roleManager;
             PrivManager privManager;
+            SchemaManager schemaManager;
 
             UserManager.CurrentUser currentUser;
             #endregion
@@ -88,8 +89,9 @@ namespace oradmin
                 {
                     // create managers
                     privManager = new PrivManager(this);
-                    roleManager = new RoleManager(conn);
+                    roleManager = new RoleManager(this);
                     userManager = new UserManager(this);
+                    schemaManager = new SchemaManager(this);
                     // store current user reference
                     currentUser = userManager.SessionUser;
                 }
@@ -122,6 +124,10 @@ namespace oradmin
             public RoleManager RoleManager
             {
                 get { return roleManager; }
+            }
+            public SchemaManager SchemaManager
+            {
+                get { return schemaManager; }
             }
 
             #endregion

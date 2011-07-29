@@ -5,7 +5,7 @@ using System.Text;
 
 namespace oradmin
 {
-    class GrantedTabPrivilege
+    public class GrantedTabPrivilege : PrivilegeBase
     {
         #region Members
         string grantee;
@@ -19,11 +19,13 @@ namespace oradmin
         #region Constructor
         public GrantedTabPrivilege(
             string grantee,
+            string rootGrantee,
             string owner,
             string table_name,
             string grantor,
             bool grantable,
-            ETabPrivilege privilege)
+            ETabPrivilege privilege):
+            base(rootGrantee)
         {
             this.grantee = grantee;
             this.owner = owner;
