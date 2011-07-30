@@ -105,11 +105,12 @@
       <DependentUpon>ConnectionDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="ConnectionManager.cs" />
+    <Compile Include="ConstraintColumnManager.cs" />
     <Compile Include="ConstraintManager.cs" />
     <Compile Include="Converters.cs" />
     <Compile Include="EnumConverters.cs" />
     <Compile Include="GrantedColPrivilege.cs" />
-    <Compile Include="GrantedPrivilege.cs" />
+    <Compile Include="GrantedSysPrivilege.cs" />
     <Compile Include="GrantedTabPrivilege.cs" />
     <Compile Include="IndexManager.cs" />
     <Compile Include="ObjectPrivManager.cs" />

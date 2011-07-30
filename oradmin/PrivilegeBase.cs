@@ -8,20 +8,21 @@ namespace oradmin
     public abstract class PrivilegeBase
     {
         #region Members
-        protected string rootGrantee;
+        protected string grantee;
+        protected UserRole granteeRef;
         #endregion
 
         #region Constructor
-        public PrivilegeBase(string rootGrantee)
+        public PrivilegeBase(string grantee)
         {
-            this.rootGrantee = rootGrantee;
+            this.grantee = grantee;
         }
         #endregion
 
         #region Properties
-        public string RootGrantee
+        public string Grantee
         {
-            get { return rootGrantee; }
+            get { return grantee; }
         }
         #endregion
     }

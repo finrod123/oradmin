@@ -7,10 +7,9 @@ using System.Windows.Data;
 namespace oradmin
 {
     [ValueConversion(typeof(string), typeof(bool))]
-    class StringToBoolConverter : IValueConverter
+    public class StringToBoolConverter : IValueConverter
     {
         #region IValueConverter Members
-
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             string strValue = value.ToString();
@@ -33,7 +32,6 @@ namespace oradmin
                         return false;
             }
         }
-
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             bool boolValue = (bool)value;
@@ -57,7 +55,6 @@ namespace oradmin
                     
             }
         }
-
         #endregion
     }
 

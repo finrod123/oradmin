@@ -17,7 +17,7 @@ namespace oradmin
         // spojeni
         protected OracleConnection conn;
         // lokalni managery
-        protected PrivManager.PrivManagerLocal privManager;
+        protected SysPrivManager.PrivManagerLocal privManager;
         protected RoleManager.RoleManagerLocal roleManager;
         
         // data z db
@@ -56,6 +56,10 @@ namespace oradmin
             // let role manager refresh itself
             roleManager.RefreshGrants();
         }
+        public virtual bool GrantSysPrivilege(GrantedSysPrivilege proposedGrant, bool adminOption)
+        {
+
+        }
         #endregion
 
         #region Properties
@@ -68,7 +72,7 @@ namespace oradmin
         {
             get { return roleManager; }
         }
-        public PrivManager.PrivManagerLocal PrivManager
+        public SysPrivManager.PrivManagerLocal PrivManager
         {
             get { return privManager; }
         }

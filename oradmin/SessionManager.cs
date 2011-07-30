@@ -70,7 +70,7 @@ namespace oradmin
 
             UserManager userManager;
             RoleManager roleManager;
-            PrivManager privManager;
+            SysPrivManager privManager;
             SchemaManager schemaManager;
 
             UserManager.CurrentUser currentUser;
@@ -88,7 +88,7 @@ namespace oradmin
                 try
                 {
                     // create managers
-                    privManager = new PrivManager(this);
+                    privManager = new SysPrivManager(this);
                     roleManager = new RoleManager(this);
                     userManager = new UserManager(this);
                     schemaManager = new SchemaManager(this);
@@ -113,7 +113,7 @@ namespace oradmin
             {
                 get { return currentUser; }
             }
-            public PrivManager PrivManager
+            public SysPrivManager PrivManager
             {
                 get { return privManager; }
             }

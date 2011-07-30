@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using Oracle.DataAccess.Client;
@@ -55,6 +56,9 @@ namespace oradmin
                 Quota quota = LoadQuota(odr);
                 quotas.Add(quota);
             }
+            
+            // notify users
+            OnAllQuotasRefreshed();
         }
         public void RefreshQuotas(ReadOnlyCollection<UserManager.User> users)
         {
@@ -62,11 +66,18 @@ namespace oradmin
             OracleCommand cmd = new OracleCommand(generateManyUsersSelectSql(users), conn);
             OracleDataReader odr = cmd.ExecuteReader();
 
-            
-        }
-        public void RefreshQuotas(UserManager.User user)
-        {
+            if (odr.HasRows)
+                // purge old quotas information
+                clearQuotasOfUsers((from user in users select user.Name) as StringCollection);
 
+            while (odr.Read())
+            {
+                Quota quota = LoadQuota(odr);
+                quotas.Add(quota);
+            }
+
+            // notify affected users
+            OnQuotasRefreshed(users);
         }
         #endregion
 
@@ -122,9 +133,10 @@ namespace oradmin
 
             return string.Format("{0} WHERE {1}", DBA_TS_QUOTAS_SELECT, string.Join(" or \n", whereClauses)); 
         }
-        private void clearQuotasOfUsers(ReadOnlyCollection<UserManager.User> users)
+        private void clearQuotasOfUsers(StringCollection userNames)
         {
-            
+            // filter out the specified users' quotas
+            quotas = quotas.SkipWhile((quota) => userNames.Contains(quota.UserName)) as List<Quota>;
         }
         #endregion
     }
@@ -153,6 +165,33 @@ namespace oradmin
             this.maxBlocks = maxBlocks;
             this.bytes = bytes;
             this.maxBytes = maxBytes;
+        }
+        #endregion
+
+        #region Properties
+        public string TablespaceName
+        {
+            get { return tablespaceName; }
+        }
+        public string UserName
+        {
+            get { return username; }
+        }
+        public decimal Blocks
+        {
+            get { return blocks; }
+        }
+        public decimal? MaxBlocks
+        {
+            get { return maxBlocks; }
+        }
+        public decimal? Bytes
+        {
+            get { return bytes; }
+        }
+        public decimal? MaxBytes
+        {
+            get { return maxBytes; }
         }
         #endregion
     }

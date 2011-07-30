@@ -14,6 +14,13 @@ namespace oradmin
     class TableManager
     {
         #region Members
+        #region SQL SELECTS
+        public static const string ALL_TABLES_SELECT = @"
+            SELECT
+                owner, table_name, tablespace_name, compression, dropped
+            FROM
+                ALL_TABLES";
+        #endregion
         SessionManager.Session session;
         SchemaManager manager;
         ColumnManager columnManager;
@@ -51,6 +58,17 @@ namespace oradmin
 
             #region Constructor
 
+            #endregion
+
+            #region Properties
+            public string Name
+            {
+                get { return tableName; }
+            }
+            public string Owner
+            {
+                get { return owner; }
+            }
             #endregion
         }
         #endregion

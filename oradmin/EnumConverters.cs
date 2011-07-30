@@ -46,7 +46,7 @@ namespace oradmin
     { }
 
     [ValueConversion(typeof(ESysPrivilege), typeof(string))]
-    public class EPrivilegeEnumConverter : EnumValueConverter<ESysPrivilege>
+    public class ESysPrivilegeEnumConverter : EnumValueConverter<ESysPrivilege>
     {
         public override object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
@@ -467,7 +467,7 @@ namespace oradmin
         #endregion
     }
 
-    public class EPrivilegeToStringConverter : EnumToStringConverter<ESysPrivilege>
+    public class ESysPrivilegeToStringConverter : EnumToStringConverter<ESysPrivilege>
     {
 
         #region EnumToStringConverter<EPrivilege> Members
@@ -834,7 +834,7 @@ namespace oradmin
             specs.Add(typeof(EServerType), new EServerTypeToStringConverter());
             specs.Add(typeof(EDbaPrivileges), new EDbaPrivilegesToStringConverter());
             specs.Add(typeof(ENamingMethod), new ENamingMethodToStringConverter());
-            specs.Add(typeof(ESysPrivilege), new EPrivilegeToStringConverter());
+            specs.Add(typeof(ESysPrivilege), new ESysPrivilegeToStringConverter());
         }
 
         public static object GetConverter(Type type)
