@@ -5,6 +5,10 @@ using System.Text;
 using Oracle.DataAccess.Client;
 using Oracle.DataAccess.Types;
 
+//---TODO: local schema manager: to define it or not to?
+//          - tasks, loading data, definition (sharing base class with session
+//            level schema manager?
+//          -> implies definition of schema-level object managers!!!
 namespace oradmin
 {
     class SchemaManager
@@ -53,5 +57,14 @@ namespace oradmin
             get { return indexManager; }
         }
         #endregion
+
+        #region Local schema manager class
+        public class LocalSchemaManager
+        {
+
+        }
+        #endregion
     }
+
+
 }

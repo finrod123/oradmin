@@ -5,7 +5,8 @@ using System.Text;
 using Oracle.DataAccess.Client;
 using Oracle.DataAccess.Types;
 
-// ---TODO: loadColumn, column properties
+// ---TODO: enum converters!!!
+//    column properties
 //    local column manager: download data
 namespace oradmin
 {
@@ -91,6 +92,7 @@ namespace oradmin
             ownerParam.OracleDbType = OracleDbType.Char;
             ownerParam.Direction = System.Data.ParameterDirection.Input;
             ownerParam.Value = schema;
+            cmd.Parameters.Add(ownerParam);
             // execute command
             OracleDataReader odr = cmd.ExecuteReader();
 
@@ -117,11 +119,13 @@ namespace oradmin
             ownerParam.OracleDbType = OracleDbType.Char;
             ownerParam.Direction = System.Data.ParameterDirection.Input;
             ownerParam.Value = table.Name;
+            cmd.Parameters.Add(ownerParam);
             OracleParameter tableParam = cmd.CreateParameter();
             tableParam.ParameterName = "table_name";
             tableParam.OracleDbType = OracleDbType.Char;
             tableParam.Direction = System.Data.ParameterDirection.Input;
             tableParam.Value = table.Owner;
+            cmd.Parameters.Add(tableParam);
             // prepare data reader
             OracleDataReader odr = cmd.ExecuteReader();
 
@@ -163,7 +167,53 @@ namespace oradmin
         #region Public static interface
         public static TableColumn LoadColumn(OracleDataReader odr)
         {
+            string tableOwner;
+            string tableName;
+            string columnName;
+            OracleDbType? dataType = null;
+            int dataLength;
+            int? dataPrecision = null, dataScale = null;
+            bool nullable;
+            int? defaultLength = null;
+            object dataDefault = null;
+            int? charLength = null;
+            bool? charUsed = null;
 
+            tableOwner = odr.GetString(odr.GetOrdinal("owner"));
+            tableName = odr.GetString(odr.GetOrdinal("table_name"));
+            columnName = odr.GetString(odr.GetOrdinal("column_name"));
+
+            
+            //if(!odr.IsDBNull(odr.GetOrdinal("data_type")))
+            //    =odr.GetString(odr.GetOrdinal(""));
+            dataLength = odr.GetInt32(odr.GetOrdinal("data_length"));
+
+            if (!odr.IsDBNull(odr.GetOrdinal("data_precision")))
+                dataPrecision = odr.GetInt32(odr.GetOrdinal("data_precision"));
+
+            if(!odr.IsDBNull(odr.GetOrdinal("data_scale")))
+                dataScale = odr.GetInt32(odr.GetOrdinal("scale"));
+
+            //// nullable
+            //if(!odr.IsDBNull(odr.GetOrdinal("data_type")))
+            //    =odr.GetString(odr.GetOrdinal(""));
+
+            if(!odr.IsDBNull(odr.GetOrdinal("default_length")))
+                defaultLength = odr.GetInt32(odr.GetOrdinal("default_length"));
+
+            if(!odr.IsDBNull(odr.GetOrdinal("data_default")))
+                dataDefault = odr.GetValue(odr.GetOrdinal("data_default"));
+
+            if(!odr.IsDBNull(odr.GetOrdinal("char_length")))
+                charLength = odr.GetInt32(odr.GetOrdinal("char_length"));
+
+            //// char used
+            //if(!odr.IsDBNull(odr.GetOrdinal("char_used")))
+            //    charUsed=odr.GetString(odr.GetOrdinal("char_used"));
+
+            return new TableColumn(tableOwner, tableName, columnName,
+                dataType, dataLength, dataPrecision, dataScale,
+                nullable, defaultLength, dataDefault, charLength, charUsed);
         }
         #endregion
 
@@ -181,12 +231,12 @@ namespace oradmin
             string tableName;
             TableManager.Table table;
             string columnName;
-            Type? dataType;
+            OracleDbType? dataType;
             int dataLength;
             int? dataPrecision, dataScale;
             bool nullable;
             int? defaultLength;
-            object? dataDefault;
+            object dataDefault;
             int? charLength;
             bool? charUsed;
             #endregion
@@ -196,12 +246,12 @@ namespace oradmin
                 string tableOwner,
                 string tableName,
                 string columnName,
-                Type? dataType,
+                OracleDbType? dataType,
                 int dataLength,
                 int? dataPrecision, int? dataScale,
                 bool nullable,
                 int? defaultLength,
-                object? dataDefault,
+                object dataDefault,
                 int? charLength,
                 bool? charUsed)
             {
@@ -229,6 +279,11 @@ namespace oradmin
             public string TableOwner
             {
                 get { return tableOwner; }
+            }
+            public string ColumnName
+            {
+                get { return columnName; }
+                set { columnName = value; }
             }
             #endregion
         }

@@ -112,6 +112,7 @@
     <Compile Include="GrantedColPrivilege.cs" />
     <Compile Include="GrantedSysPrivilege.cs" />
     <Compile Include="GrantedTabPrivilege.cs" />
+    <Compile Include="IndexColumnManager.cs" />
     <Compile Include="IndexManager.cs" />
     <Compile Include="ObjectPrivManager.cs" />
     <Compile Include="ObservableCollection.cs" />

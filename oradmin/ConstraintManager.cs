@@ -165,8 +165,25 @@ namespace oradmin
         #endregion
 
         #region Public static interface
+        /// <summary>
+        /// Loads an instance of a constraint out of an OracleDataReader result set
+        /// </summary>
+        /// <param name="odr">OracleDataReader instance</param>
+        /// <returns>Loaded constraint</returns>
         public static ConstraintBase LoadConstraint(OracleDataReader odr)
         {
+            ConstraintBase constraint;
+            string owner;
+            string constraintName;
+            EConstraintType? constraintType = null;
+            string tableName;
+            EConstraintStatus? constraintStatus = null;
+            EConstraintDeferrability? deferrable = null;
+            EConstraintDeferredState? deferred = null;
+            EConstraintValidation? validation = null;
+            EConstraintReliability? reliability = null;
+            bool? invalid = null;
+
 
         }
         #endregion
@@ -280,7 +297,7 @@ namespace oradmin
 
             #region Constructor
             public CheckConstraint(
-                string tableOwner,
+                string owner,
                 string tableName,
                 TableManager.Table tableRef,
                 string constraintName,
@@ -291,7 +308,7 @@ namespace oradmin
                 EConstraintReliability? reliabilityState,
                 bool? invalid,
                 string searchCondition) :
-                base(tableOwner, constraintName, EConstraintType.Check, constraintStatus,
+                base(owner, tableName, constraintName, EConstraintType.Check, constraintStatus,
                       deferrableState, deferredState, validationState, reliabilityState, invalid)
             {
                 this.searchCondition = searchCondition;
@@ -315,7 +332,8 @@ namespace oradmin
 
             #region Constructor
             public ColumnBasedConstraint(
-                string tableOwner,
+                string owner,
+                string tableName,
                 string constraintName,
                 EConstraintType? constraintType,
                 EConstraintStatus? constraintStatus,
@@ -324,7 +342,7 @@ namespace oradmin
                 EConstraintValidation? validationState,
                 EConstraintReliability? reliabilityState,
                 bool? invalid) :
-                base(tableOwner, constraintName, constraintType, constraintStatus,
+                base(owner, tableName, constraintName, constraintType, constraintStatus,
                  deferrableState, deferredState, validationState, reliabilityState, invalid)
             { }
             #endregion
@@ -340,7 +358,8 @@ namespace oradmin
         public abstract class CandidateKeyConstraint : ColumnBasedConstraint
         {
             public CandidateKeyConstraint(
-                string tableOwner,
+                string owner,
+                string tableName,
                 string constraintName,
                 EConstraintType? constraintType,
                 EConstraintStatus? constraintStatus,
@@ -349,7 +368,7 @@ namespace oradmin
                 EConstraintValidation? validationState,
                 EConstraintReliability? reliabilityState,
                 bool? invalid) :
-                base(tableOwner, constraintName, constraintType, constraintStatus,
+                base(owner, tableName, constraintName, constraintType, constraintStatus,
                       deferrableState, deferredState, validationState, reliabilityState, invalid)
             { }
         }
@@ -357,7 +376,8 @@ namespace oradmin
         public class PrimaryKeyConstraint : CandidateKeyConstraint
         {
             public PrimaryKeyConstraint(
-                string tableOwner,
+                string owner,
+                string tableName,
                 string constraintName,
                 EConstraintStatus? constraintStatus,
                 EConstraintDeferrability? deferrableState,
@@ -365,7 +385,7 @@ namespace oradmin
                 EConstraintValidation? validationState,
                 EConstraintReliability? reliabilityState,
                 bool? invalid) :
-                base(tableOwner, constraintName, EConstraintType.PrimaryKey, constraintStatus,
+                base(owner, tableName, constraintName, EConstraintType.PrimaryKey, constraintStatus,
                  deferrableState, deferredState, validationState, reliabilityState, invalid)
             { }
         }
@@ -373,7 +393,8 @@ namespace oradmin
         public class UniqueKeyConstraint : CandidateKeyConstraint
         {
             public UniqueKeyConstraint(
-                string tableOwner,
+                string owner,
+                string tableName,
                 string constraintName,
                 EConstraintStatus? constraintStatus,
                 EConstraintDeferrability? deferrableState,
@@ -381,7 +402,7 @@ namespace oradmin
                 EConstraintValidation? validationState,
                 EConstraintReliability? reliabilityState,
                 bool? invalid) :
-                base(tableOwner, constraintName, EConstraintType.UniqueKey, constraintStatus,
+                base(owner, tableName, constraintName, EConstraintType.UniqueKey, constraintStatus,
                  deferrableState, deferredState, validationState, reliabilityState, invalid)
             { }
         }
@@ -389,12 +410,15 @@ namespace oradmin
         public class ForeignKeyConstraint : ColumnBasedConstraint
         {
             #region Members
+            string referencedConstraintName;
+            string referencedTableOwner;
             CandidateKeyConstraint referencedConstraint;
             EDeleteRule? deleteRule;
             #endregion
 
             public ForeignKeyConstraint(
-                string tableOwner,
+                string owner,
+                string tableName,
                 string constraintName,
                 EConstraintType? constraintType,
                 EConstraintStatus? constraintStatus,
@@ -406,21 +430,31 @@ namespace oradmin
                 string referencedTableOwner,
                 string referencedConstraintName,
                 EDeleteRule? deleteRule) :
-                base(tableOwner, constraintName, EConstraintType.ForeignKey, constraintStatus,
+                base(owner, tableName, constraintName, EConstraintType.ForeignKey, constraintStatus,
                        deferrableState, deferredState, validationState, reliabilityState, invalid)
             {
                 this.deleteRule = deleteRule;
+                this.referencedTableOwner = referencedTableOwner;
+                this.referencedConstraintName = referencedConstraintName;
             }
 
             #region Properties
+            public string ReferencedTableOwner
+            {
+                get { return this.referencedTableOwner; }
+            }
+            public string ReferencedConstraintName
+            {
+                get { return this.referencedConstraintName; }
+            }
             public CandidateKeyConstraint ReferencedConstraint
             {
                 get { return referencedConstraint; }
+                set { this.referencedConstraint = value; }
             }
             public EDeleteRule? DeleteRule
             {
                 get { return this.deleteRule; }
-                set { this.deleteRule = value; }
             }
             #endregion
         }

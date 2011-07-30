@@ -71,21 +71,7 @@ namespace oradmin
         }
         #endregion
 
-        #region IndexColumn struct
-        public struct IndexColumn
-        {
-            #region Members
-            bool? descend;
-            #endregion
-
-            #region Constructor
-            public IndexColumn(bool? descend)
-            {
-                this.descend = descend;
-            }
-            #endregion
-        }
-        #endregion
+        
     }
 
     public enum EIndexType
