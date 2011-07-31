@@ -90,7 +90,23 @@ namespace oradmin
         #region Public static interface
         public static IndexColumn LoadColumn(OracleDataReader odr)
         {
+            string indexOwner = odr.GetString(odr.GetOrdinal("index_owner"));
+            string indexName = odr.GetString(odr.GetOrdinal("index_name"));
+            string tableOwner = odr.GetString(odr.GetOrdinal("table_owner"));
+            string tableName = odr.GetString(odr.GetOrdinal("table_name"));
+            int columnPosition = odr.GetInt32(odr.GetOrdinal("column_position"));
+            bool? descend = null;
+            string columnName = null;
 
+            if (!odr.IsDBNull(odr.GetOrdinal("column_name")))
+                columnName = odr.GetString(odr.GetOrdinal("column_name"));
+
+            //---TODO: converters!
+            //if(!odr.IsDBNull(odr.GetOrdinal("descend")))
+
+            return new IndexColumn(
+                indexOwner, indexName, tableOwner, tableName,
+                columnName, columnPosition, descend);
         }
         #endregion
 
@@ -100,9 +116,11 @@ namespace oradmin
             #region Members
             string indexOwner;
             string indexName;
+            IndexManager.Index indexRef;
             string tableOwner;
             string tableName;
             string columnName;
+            ColumnManager.TableColumn columnRef;
             int columnPosition;
             bool? descend;
             #endregion
@@ -124,6 +142,55 @@ namespace oradmin
                 this.columnName = columnName;
                 this.columnPosition = columnPosition;
                 this.descend = descend;
+            }
+            #endregion
+
+            #region Properties
+            public string IndexOwner
+            {
+                get { return this.indexOwner; }
+                set { this.indexOwner = value; }
+            }
+            public string IndexName
+            {
+                get {
+                    if(this.indexRef != null)
+                        return this.indexRef
+                    return this.indexName; }
+                set { this.indexName = value; }
+            }
+            public IndexManager.Index Index
+            {
+                get { return this.indexRef; }
+            }
+            public string TableOwner
+            {
+                get { return this.tableOwner; }
+                set { this.tableOwner = value; }
+            }
+            public string TableName
+            {
+                get { return this.tableName; }
+                set { this.tableName = value;}
+            }
+            public string ColumnName
+            {
+                get
+                {
+                    if (this.columnRef != null)
+                        return this.columnRef.ColumnName;
+
+                    return this.columnName;
+                }
+                set { this.columnName = value; }
+            }
+            public ColumnManager.TableColumn Column
+            {
+                get
+                {
+                    
+                }
+                set { this.columnRef = value; }
             }
             #endregion
         }

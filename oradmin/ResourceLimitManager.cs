@@ -142,7 +142,6 @@ namespace oradmin
         }
         #endregion
     }
-
     public class KernelResourceLimit : UserLimit
     {
         #region Members
@@ -172,20 +171,21 @@ namespace oradmin
         }
         #endregion
     }
-
     public class PasswordLimit : UserLimit
     {
         #region Members
         EPasswordLimitName limitName;
+        ExpressionPasswordLimitValue value;
         #endregion
 
         #region Constructor
         public PasswordLimit(string profile,
                              EPasswordLimitName limitName,
-                             NumericResourceLimitValue value)
+                             ExpressionPasswordLimitValue value):
             base(profile, EResourceType.Password)
         {
             this.limitName = limitName;
+            this.value = value;
         }
         #endregion
 
@@ -194,11 +194,15 @@ namespace oradmin
         {
             get { return limitName; }
         }
+        public ExpressionPasswordLimitValue Value
+        {
+            get { return value; }
+        }
         #endregion
 
     }
 
-    public class NumericResourceLimitValue
+    public struct NumericResourceLimitValue
     {
         #region Members
         protected ENumericResourceLimitValue value;
@@ -212,13 +216,49 @@ namespace oradmin
             this.numericValue = numericValue;
         }
         #endregion
-    }
 
+        #region Properties
+		public ENumericResourceLimitValue Value
+        {
+            get { return value;}
+        }
+        public decimal? NumericValue
+        {
+            get { return numericValue;}
+        }
+	    #endregion
+    }
+    public struct ExpressionPasswordLimitValue
+    {
+        #region Members
+        EPasswordLimitValue value;
+        string expression;
+	    #endregion
+
+        #region Constructor
+        public ExpressionPasswordLimitValue(EPasswordLimitValue value, string expression)
+        {
+            this.value = value;
+            this.expression = expression;
+        }
+        #endregion
+
+        #region Properties
+        public EPasswordLimitValue Value
+        {
+            get { return this.value; }
+        }
+        public string Expression
+        {
+            get { return this.expression; }
+        }
+        #endregion
+    }
 
     public class PrivateSgaKernelResourceLimit : KernelResourceLimit
     {
         #region Members
-        SizeClause? numericValue;
+        
         #endregion
 
         #region Constructor

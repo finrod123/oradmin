@@ -40,8 +40,6 @@ namespace oradmin
         SessionManager.Session session;
         OracleConnection conn;
 
-        Dictionary<string, ConstraintColumn> schemaColumns =
-            new Dictionary<string, ConstraintColumn>();
         List<ConstraintColumn> columns = new List<ConstraintColumn>();
         #endregion
 
@@ -67,7 +65,6 @@ namespace oradmin
 
             // purge old data
             columns.Clear();
-            schemaColumns.Clear();
 
             while (odr.Read())
             {
@@ -75,15 +72,26 @@ namespace oradmin
                 columns.Add(column);
                 
             }
-            System.Collections.
-            
         }
         #endregion
 
         #region Public static interface
         public static ConstraintColumn LoadColumn(OracleDataReader odr)
         {
+            string owner = odr.GetString(odr.GetOrdinal("owner"));
+            string constraintName = odr.GetString(odr.GetOrdinal("constraint_name"));
+            string tableName = odr.GetString(odr.GetOrdinal("table_name"));
+            string columnName = null;
+            int? position = null;
 
+            if (!odr.IsDBNull(odr.GetOrdinal("column_name")))
+                columnName = odr.GetString(odr.GetOrdinal("column_name"));
+
+            if (!odr.IsDBNull(odr.GetOrdinal("position")))
+                position = odr.GetInt32(odr.GetOrdinal("position"));
+
+            return new ConstraintColumn(
+                owner, constraintName, tableName, columnName, position);
         }
         #endregion
 

@@ -8,9 +8,42 @@ using Oracle.DataAccess.Types;
 //---TODO: index constructor, loading index columns, loading indexes
 namespace oradmin
 {
+    public delegate void AllIndexesRefreshedHandler();
+
     class IndexManager
     {
         #region Members
+        #region SQL SELECTS
+        public static const string ALL_INDEXES_SELECT = @"
+            SELECT
+                owner, index_name, table_owner, table_name,
+                index_type, uniqueness, compression, prefix_length,
+                tablespace_name, partitioned, dropped,
+                status, funcidx_status
+            FROM
+                ALL_INDEXES";
+        public static const string ALL_INDEXES_SELECT_SCHEMA = @"
+            SELECT
+                owner, index_name, table_owner, table_name,
+                index_type, uniqueness, compression, prefix_length,
+                tablespace_name, partitioned, dropped,
+                status, funcidx_status
+            FROM
+                ALL_INDEXES
+            WHERE
+                table_owner = :table_owner";
+        public static const string ALL_INDEXES_SELECT_TABLE = @"
+            SELECT
+                owner, index_name, table_owner, table_name,
+                index_type, uniqueness, compression, prefix_length,
+                tablespace_name, partitioned, dropped,
+                status, funcidx_status
+            FROM
+                ALL_INDEXES
+            WHERE
+                table_owner = :table_owner and
+                table_name = :table_name";
+        #endregion
         SessionManager.Session session;
         OracleConnection conn;
 
@@ -25,6 +58,30 @@ namespace oradmin
 
             this.session = session;
             this.conn = this.session.Connection;
+        }
+        #endregion
+
+        #region Public interface
+        public void Refresh()
+        {
+            OracleCommand cmd = new OracleCommand(ALL_INDEXES_SELECT, conn);
+            OracleDataReader odr = cmd.ExecuteReader();
+
+            if (!odr.HasRows)
+                return;
+
+            while (odr.Read())
+            {
+
+            }
+        }
+        public bool Refresh(string schema)
+        {
+
+        }
+        public bool Refresh(TableManager.Table table)
+        {
+
         }
         #endregion
 
@@ -66,6 +123,13 @@ namespace oradmin
                 bool? dropped)
             {
 
+            }
+            #endregion
+
+            #region Properties
+            public string Owner
+            {
+                get { return this.owner; }
             }
             #endregion
         }
