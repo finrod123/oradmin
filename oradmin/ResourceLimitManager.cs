@@ -6,9 +6,9 @@ using System.Text;
 using Oracle.DataAccess.Client;
 using Oracle.DataAccess.Types;
 
-// ---TODO: typ hodnoty resource limitu,
+// ---TODO:
 //    doplnit enum converters!!!
-//    dodelat privatesga a password function limits classes
+//    dodelat password function limits classes
 namespace oradmin
 {
     public delegate void ResourceLimitsRefreshedHandler();
@@ -142,17 +142,16 @@ namespace oradmin
         }
         #endregion
     }
-    public class KernelResourceLimit : UserLimit
+    public abstract class NumericUserLimit : UserLimit
     {
         #region Members
-        EKernelLimitName limitName;
-        protected NumericResourceLimitValue value;
+        protected EKernelLimitName limitName;
+        protected ENumericResourceLimitValue value;
         #endregion
 
         #region Constructor
-        public KernelResourceLimit(string profile,
-                                   EKernelLimitName limitName,
-                                   NumericResourceLimitValue value) :
+        public NumericUserLimit(string profile, EKernelLimitName limitName,
+                                ENumericResourceLimitValue value) :
             base(profile, EResourceType.Kernel)
         {
             this.limitName = limitName;
@@ -165,9 +164,33 @@ namespace oradmin
         {
             get { return limitName; }
         }
-        public NumericResourceLimitValue Value
+        public ENumericResourceLimitValue Value
         {
-            get { return value; }
+            get { return this.value; }
+        }
+        #endregion
+    }
+    public class KernelResourceLimit : NumericUserLimit
+    {
+        #region Members
+        decimal? numericValue;
+        #endregion
+
+        #region Constructor
+        public KernelResourceLimit(string profile,
+                                   EKernelLimitName limitName,
+                                   ENumericResourceLimitValue value,
+                                   decimal? numericValue) :
+            base(profile, limitName, value)
+        {
+            this.numericValue = numericValue;
+        }
+        #endregion
+
+        #region Properties
+        public decimal? NumericValue
+        {
+            get { return numericValue; }
         }
         #endregion
     }
@@ -201,7 +224,6 @@ namespace oradmin
         #endregion
 
     }
-
     public struct NumericResourceLimitValue
     {
         #region Members
@@ -255,19 +277,28 @@ namespace oradmin
         #endregion
     }
 
-    public class PrivateSgaKernelResourceLimit : KernelResourceLimit
+    public class PrivateSgaKernelResourceLimit : NumericUserLimit
     {
         #region Members
-        
+        SizeClause numericValue;
         #endregion
 
         #region Constructor
         public PrivateSgaKernelResourceLimit(string profile,
                                              ENumericResourceLimitValue value,
-                                             SizeClause numericValue) :
-            base(profile, EKernelLimitName.PrivateSga)
+                                             decimal? numericValue,
+                                             ESizeClauseSuffix unit) :
+            base(profile, EKernelLimitName.PrivateSga, value)
         {
-            this.
+            this.numericValue.value = numericValue;
+            this.numericValue.unit = unit;
+        }
+        #endregion
+
+        #region Properties
+        public SizeClause NumericValue
+        {
+            get { return this.numericValue; }
         }
         #endregion
     }
@@ -275,29 +306,21 @@ namespace oradmin
     public struct SizeClause
     {
         #region Members
-        int value;
-        ESizeClauseSuffix unit;
+        public decimal? value;
+        public ESizeClauseSuffix unit;
         #endregion
 
         #region Constructor
-        public SizeClause(int value, ESizeClauseSuffix unit)
+        public SizeClause(decimal? value, ESizeClauseSuffix unit)
         {
             this.value = value;
             this.unit = unit;
         }
         #endregion
-
-        #region Properties
-        public decimal Value
-        {
-            get { return value; }
-        }
-        public ESizeClauseSuffix Unit
-        {
-            get { return unit; }
-        }
-        #endregion
     }
+
+
+
 
     #region Resource enums
     public enum EResourceType

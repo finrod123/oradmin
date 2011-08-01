@@ -10,7 +10,7 @@ namespace oradmin
 {
     public delegate void AllIndexesRefreshedHandler();
 
-    class IndexManager
+    class IndexManagerSession
     {
         #region Members
         #region SQL SELECTS
@@ -51,7 +51,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public IndexManager(SessionManager.Session session)
+        public IndexManagerSession(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -77,9 +77,9 @@ namespace oradmin
         }
         public bool Refresh(string schema)
         {
-
+            
         }
-        public bool Refresh(TableManager.Table table)
+        public bool Refresh(SessionTableManager.Table table)
         {
 
         }
@@ -92,7 +92,7 @@ namespace oradmin
             string owner;
             string tableOwner;
             string tableName;
-            TableManager.Table tableRef;
+            SessionTableManager.Table tableRef;
             string indexName;
             EIndexType? indexType;
             EIndexUniqueness? indexUniqueness;
@@ -111,7 +111,7 @@ namespace oradmin
                 string owner,
                 string tableOwner,
                 string tableName,
-                TableManager.Table tableRef,
+                SessionTableManager.Table tableRef,
                 string indexName,
                 EIndexType? indexType,
                 EIndexUniqueness? indexUniqueness,

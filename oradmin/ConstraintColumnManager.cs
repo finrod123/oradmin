@@ -103,8 +103,8 @@ namespace oradmin
             string constraintName;
             string tableName;
             string columnName;
-            ConstraintManager.ColumnBasedConstraint constraintRef;
-            ColumnManager.TableColumn columnRef;
+            ConstraintManagerSession.ColumnBasedConstraint constraintRef;
+            ColumnManagerSession.TableColumn columnRef;
             int? position;
             #endregion
 
@@ -147,7 +147,7 @@ namespace oradmin
                     return constraintName;
                 }
             }
-            public ConstraintManager.ColumnBasedConstraint Constraint
+            public ConstraintManagerSession.ColumnBasedConstraint Constraint
             {
                 get { return this.constraintRef; }
                 set { this.constraintRef = value; }
@@ -172,7 +172,7 @@ namespace oradmin
                     return columnName;
                 }
             }
-            public ColumnManager.TableColumn Column
+            public ColumnManagerSession.TableColumn Column
             {
                 get { return this.columnRef; }
                 set { this.columnRef = value; }

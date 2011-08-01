@@ -108,6 +108,8 @@
     <Compile Include="ConstraintColumnManager.cs" />
     <Compile Include="ConstraintManager.cs" />
     <Compile Include="Converters.cs" />
+    <Compile Include="DataManager.cs" />
+    <Compile Include="DependencyManager.cs" />
     <Compile Include="EnumConverters.cs" />
     <Compile Include="GrantedColPrivilege.cs" />
     <Compile Include="GrantedSysPrivilege.cs" />
@@ -139,7 +141,9 @@
     <Compile Include="SchemaManager.cs" />
     <Compile Include="SequenceGenerator.cs" />
     <Compile Include="SessionManager.cs" />
+    <Compile Include="TableBasedPrivilege.cs" />
     <Compile Include="TableManager.cs" />
+    <Compile Include="Tuple.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserManager.cs" />
     <Compile Include="UserRole.cs" />

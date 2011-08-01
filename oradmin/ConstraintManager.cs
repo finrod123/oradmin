@@ -15,7 +15,7 @@ namespace oradmin
     // properties
     // tridy privilegii
     // nacitani privilegii
-    public class ConstraintManager
+    public class ConstraintManagerSession
     {
         #region Members
         #region SQL SELECTS
@@ -57,7 +57,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public ConstraintManager(SessionManager.Session session)
+        public ConstraintManagerSession(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -115,7 +115,7 @@ namespace oradmin
 
             return true;
         }
-        public bool Refresh(TableManager.Table table)
+        public bool Refresh(SessionTableManager.Table table)
         {
             OracleCommand cmd = new OracleCommand(ALL_CONSTRAINTS_TABLE_SELECT, conn);
             cmd.BindByName = true;
@@ -158,7 +158,7 @@ namespace oradmin
         {
             constraints.RemoveAll((constraint) => (schema.Equals(constraint.Owner))); 
         }
-        private void purgeConstraintData(TableManager.Table table)
+        private void purgeConstraintData(SessionTableManager.Table table)
         {
             constraints.RemoveAll((constraint) => (constraint.Table == table));
         }
@@ -184,7 +184,7 @@ namespace oradmin
             EConstraintReliability? reliability = null;
             bool? invalid = null;
 
-
+            
         }
         #endregion
 
@@ -194,7 +194,7 @@ namespace oradmin
             #region Members
             protected string owner;
             protected string tableName;
-            protected TableManager.Table tableRef;
+            protected SessionTableManager.Table tableRef;
             protected string constraintName;
             protected EConstraintType? constraintType;
             protected EConstraintStatus? constraintStatus;
@@ -242,7 +242,7 @@ namespace oradmin
                 get { return tableName; }
                 set { tableName = value; }
             }
-            public TableManager.Table Table
+            public SessionTableManager.Table Table
             {
                 get { return tableRef; }
                 set { tableRef = value; }
@@ -299,7 +299,7 @@ namespace oradmin
             public CheckConstraint(
                 string owner,
                 string tableName,
-                TableManager.Table tableRef,
+                SessionTableManager.Table tableRef,
                 string constraintName,
                 EConstraintStatus? constraintStatus,
                 EConstraintDeferrability? deferrableState,

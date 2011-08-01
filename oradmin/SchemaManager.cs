@@ -11,48 +11,48 @@ using Oracle.DataAccess.Types;
 //          -> implies definition of schema-level object managers!!!
 namespace oradmin
 {
-    class SchemaManager
+    class SchemaManagerSession
     {
         #region Members
         SessionManager.Session session;
-        TableManager tableManager;
+        SessionTableManager tableManager;
 
-        ColumnManager columnManager;
-        ConstraintManager constraintManager;
-        IndexManager indexManager;
+        ColumnManagerSession columnManager;
+        ConstraintManagerSession constraintManager;
+        IndexManagerSession indexManager;
 
         OracleConnection conn;
         #endregion
 
         #region Constructor
-        public SchemaManager(SessionManager.Session session)
+        public SchemaManagerSession(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
 
             this.session = session;
             this.conn = session.Connection;
-            this.tableManager = new TableManager(session);
-            this.columnManager = new ColumnManager();
-            this.constraintManager = new ConstraintManager();
-            this.indexManager = new IndexManager();
+            this.tableManager = new SessionTableManager(session);
+            this.columnManager = new ColumnManagerSession();
+            this.constraintManager = new ConstraintManagerSession();
+            this.indexManager = new IndexManagerSession();
         }
         #endregion
 
         #region Properties
-        public TableManager TableManager
+        public SessionTableManager TableManager
         {
             get { return tableManager; }
         }
-        public ColumnManager ColumnManager
+        public ColumnManagerSession ColumnManager
         {
             get { return columnManager; }
         }
-        public ConstraintManager ConstraintManager
+        public ConstraintManagerSession ConstraintManager
         {
             get { return constraintManager; }
         }
-        public IndexManager IndexManager
+        public IndexManagerSession IndexManager
         {
             get { return indexManager; }
         }

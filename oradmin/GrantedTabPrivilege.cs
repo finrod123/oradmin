@@ -5,34 +5,55 @@ using System.Text;
 
 namespace oradmin
 {
-    public class GrantedTabPrivilege : PrivilegeBase
+    //---TODO: enum converters
+    public class GrantedTabPrivilege : TableBasedPrivilegeGrant
     {
         #region Members
-        string grantee;
-        string owner;
-        string table_name;
-        string grantor;
-        bool grantable;
-        ETabPrivilege privilege;
+        GrantedTabPrivilegeData data;
         #endregion
 
         #region Constructor
         public GrantedTabPrivilege(
             string grantee,
-            string rootGrantee,
             string owner,
-            string table_name,
+            string tableName,
             string grantor,
             bool grantable,
-            ETabPrivilege privilege):
-            base(rootGrantee)
+            ETabPrivilege privilege)
         {
-            this.grantee = grantee;
-            this.owner = owner;
-            this.table_name = table_name;
-            this.grantor = grantor;
-            this.grantable = grantable;
-            this.privilege = privilege;
+            this.data = new GrantedTabPrivilegeData(grantee, owner, tableName,
+                grantor, grantable, privilege);
+        }
+        #endregion
+
+        #region Properties
+        public ETabPrivilege Privilege
+        {
+            get { return this.data.privilege; }
+        }
+        #endregion
+
+        #region Privileges data class
+        public class GrantedTabPrivilegeData : TableBasedPrivilegeGrant.TableBasedPrivilegeGrantData
+        {
+            #region Members
+            public ETabPrivilege privilege;
+            #endregion
+
+            #region Constructor
+            public GrantedTabPrivilegeData(
+                string grantee,
+                string owner,
+                string tableName,
+                string grantor,
+                bool grantable,
+                ETabPrivilege privilege):
+                base(grantee, owner, tableName, grantor, grantable)
+                
+            {
+                this.privilege = privilege;
+            }
+            #endregion
         }
         #endregion
     }

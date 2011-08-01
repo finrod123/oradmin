@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Windows.Data;
 using Oracle.DataAccess.Client;
 using Oracle.DataAccess.Types;
 
@@ -9,11 +10,15 @@ namespace oradmin
 {   
     // --- TODO: refresh - nelze jednoduse purge, je nutny diff merge (add, modify, delete
     //     nonexistent
-    //                   - LoadTable
+    //                   - UpdateTable, nacteni dalsich souvisejicich udaju (cols, indexes,...
+
+    using TableLookupKey = Tuple<string, string>;
+    using TableLookupDictionary = Dictionary<Tuple<string, string>, SessionTableManager.Table>;
 
     public delegate void AllTablesRefreshedHandler();
-
-    class TableManager
+    
+    
+    class SessionTableManager
     {
         #region Members
         #region SQL SELECTS
@@ -39,18 +44,19 @@ namespace oradmin
                 table_name = :table_name";
         #endregion
         SessionManager.Session session;
-        SchemaManager manager;
-        ColumnManager columnManager;
-        ConstraintManager constraintManager;
-        IndexManager indexManager;
-
+        SchemaManagerSession manager;
+        ColumnManagerSession columnManager;
+        ConstraintManagerSession constraintManager;
+        IndexManagerSession indexManager;
         OracleConnection conn;
-
+        // structures to hold tables
         ObservableCollection<Table> tables = new ObservableCollection<Table>();
+        ListCollectionView view;
+        TableLookupDictionary tablesDict = new TableLookupDictionary();
         #endregion
 
         #region Constructor
-        public TableManager(SessionManager.Session session)
+        public SessionTableManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -61,6 +67,8 @@ namespace oradmin
             this.columnManager = manager.ColumnManager;
             this.constraintManager = manager.ConstraintManager;
             this.indexManager = manager.IndexManager;
+
+            view = new ListCollectionView(tables);
         }
         #endregion
 
@@ -73,78 +81,27 @@ namespace oradmin
             if (!odr.HasRows)
                 return;
 
-            // purge old data
-            tables.Clear();
-
             while (odr.Read())
             {
-                Table table = LoadTable(odr);
-                tables.Add(table);
+                // load a key
+                TableLookupKey key = LoadKey(odr);
+                // search a table
+                Table table;
+                // if a table is new, add it
+                if (!tablesDict.TryGetValue(key, out table))
+                {
+                    table = LoadTable(odr);
+                    // add it
+                    addTable(table);
+                } else
+                {
+                    // update it
+                    Table.TableData
+                }
             }
 
             // notify
             OnAllTablesRefreshed();
-        }
-        public bool Refresh(string schema)
-        {
-            OracleCommand cmd = new OracleCommand(ALL_TABLES_SELECT_SCHEMA, conn);
-            cmd.BindByName = true;
-            // set up parameters
-            OracleParameter schemaParam = cmd.CreateParameter();
-            schemaParam.ParameterName = "owner";
-            schemaParam.OracleDbType = OracleDbType.Char;
-            schemaParam.Direction = System.Data.ParameterDirection.Input;
-            schemaParam.Value = schema;
-            cmd.Parameters.Add(schemaParam);
-            // execute
-            OracleDataReader odr = cmd.ExecuteReader();
-
-            if (!odr.HasRows)
-                return false;
-
-            // purge old data
-            purgeOldData(schema);
-
-            while (odr.Read())
-            {
-                Table table = LoadTable(odr);
-                addTable(table);
-            }
-
-            return true;
-        }
-        public void Refresh(Table table)
-        {
-            OracleCommand cmd = new OracleCommand(ALL_TABLES_SELECT_TABLE, conn);
-            cmd.BindByName = true;
-            // set up parameters
-            // schema parameter
-            OracleParameter schemaParam = cmd.CreateParameter();
-            schemaParam.ParameterName = "owner";
-            schemaParam.OracleDbType = OracleDbType.Char;
-            schemaParam.Direction = System.Data.ParameterDirection.Input;
-            schemaParam.Value = table.Owner;
-            cmd.Parameters.Add(schemaParam);
-            // table_name parameter
-            OracleParameter tableParam = cmd.CreateParameter();
-            tableParam.ParameterName = "table_name";
-            tableParam.OracleDbType = OracleDbType.Char;
-            tableParam.Direction = System.Data.ParameterDirection.Input;
-            tableParam.Value = table.Name;
-            cmd.Parameters.Add(tableParam);
-            // execute
-            OracleDataReader odr = cmd.ExecuteReader();
-
-            if (!odr.HasRows)
-                return false;
-
-            // purge old data
-            purgeOldData(table);
-
-            while (odr.Read())
-            {
-                Table table = LoadTable(odr);
-            }
         }
         #endregion
 
@@ -160,24 +117,51 @@ namespace oradmin
                 AllTablesRefreshed();
             }
         }
-        private void purgeOldData(string schema)
-        {
-            
-        }
-        private void purgeOldData(Table table)
-        {
-            tables.Remove(table);
-        }
         private void addTable(Table table)
         {
             tables.Add(table);
+            tablesDict.Add(new TableLookupKey(table.Owner, table.Name), table);
         }
         #endregion
 
         #region Public static interface
         public static Table LoadTable(OracleDataReader odr)
         {
+            string owner;
+            string tableName;
+            string tablespaceName = null;
+            bool? compression = null;
+            bool? dropped = null;
 
+            owner = odr.GetString(odr.GetOrdinal("owner"));
+            tableName = odr.GetString(odr.GetOrdinal("table_name"));
+
+            if (!odr.IsDBNull(odr.GetOrdinal("tablespace_name")))
+                tablespaceName = odr.GetString(odr.GetOrdinal("tablespace_name"));
+
+            //---TODO: enum converter!!!
+            //if (!odr.IsDBNull(odr.GetOrdinal("compression")))
+
+            StringToBoolConverter strToBoolConverter = new StringToBoolConverter();
+            if (!odr.IsDBNull(odr.GetOrdinal("dropped")))
+                dropped = (bool)strToBoolConverter.Convert(
+                    odr.GetString(odr.GetOrdinal("dropped")),
+                    typeof(string), EStringToBoolConverterOption.YesNo, null);
+
+            return new Table(owner, tableName, tablespaceName, compression, dropped);
+        }
+        public static TableLookupKey LoadKey(OracleDataReader odr)
+        {
+            return Tuple.Create(
+                odr.GetString(odr.GetOrdinal("owner")),
+                odr.GetString(odr.GetOrdinal("table_name")));
+        }
+        #endregion
+
+        #region Properties
+        public ListCollectionView TablesView
+        {
+            get { return view; }
         }
         #endregion
 
@@ -185,25 +169,87 @@ namespace oradmin
         public class Table
         {
             #region Members
-            string owner; // ---TODO: pridat i referenci na uzivatele?
-            string tableName;
-            string tablespaceName;
-            bool compression;
-            bool dropped;
+            SessionManager.Session session;
+            OracleConnection conn;
+            SessionTableManager manager;
+            DataManager.LocalDataManager dataManager;
+
+            TableData data, copyData;
             #endregion
 
             #region Constructor
+            public Table(
+                string owner,
+                string tableName,
+                string tablespaceName,
+                bool? compression,
+                bool? dropped,
+                SessionManager.Session session,
+                SessionTableManager manager)
+            {
+                if (session == null)
+                    throw new ArgumentNullException("Session");
 
+                this.session = session;
+                this.conn = this.session.Connection;
+                this.manager = manager;
+
+                this.data = new TableData(owner, tableName, tablespaceName,
+                    compression, dropped);
+
+                
+            }
             #endregion
 
             #region Properties
             public string Name
             {
-                get { return tableName; }
+                get { return data.tableName; }
             }
             public string Owner
             {
-                get { return owner; }
+                get { return data.owner; }
+            }
+            public string TablespaceName
+            {
+                get { return data.tablespaceName; }
+            }
+            public bool? Compression
+            {
+                get { return data.compression; }
+            }
+            public bool? Dropped
+            {
+                get { return data.dropped; }
+            }
+            #endregion
+
+            #region Struct for flat table data
+            public struct TableData
+            {
+                #region Members
+                public string owner;
+                public string tableName;
+                public string tablespaceName;
+                public bool? compression;
+                public bool? dropped;
+                #endregion
+
+                #region Constructor
+                public TableData(
+                    string owner,
+                    string tableName,
+                    string tablespaceName,
+                    bool? compression,
+                    bool? dropped)
+                {
+                    this.owner = owner;
+                    this.tableName = tableName;
+                    this.tablespaceName = tablespaceName;
+                    this.compression = compression;
+                    this.dropped = dropped;
+                }
+                #endregion
             }
             #endregion
         }

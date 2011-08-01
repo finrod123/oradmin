@@ -5,14 +5,16 @@ using System.Text;
 using Oracle.DataAccess.Client;
 using Oracle.DataAccess.Types;
 
-// ---TODO: enum converters!!!
+// ---TODO: 
+//    opravit refresh pattern
+//    enum converters!!!
 //    column properties
 //    local column manager: download data
 namespace oradmin
 {
     public delegate void AllColumnsRefreshedHandler();
 
-    class ColumnManager
+    class ColumnManagerSession
     {
         #region Members
         #region SQL SELECTS
@@ -49,11 +51,11 @@ namespace oradmin
         SessionManager.Session session;
         OracleConnection conn;
 
-        List<ColumnManager.TableColumn> columns = new List<TableColumn>();
+        List<ColumnManagerSession.TableColumn> columns = new List<TableColumn>();
         #endregion
 
         #region Constructor
-        public ColumnManager(SessionManager.Session session)
+        public ColumnManagerSession(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -64,7 +66,7 @@ namespace oradmin
         #endregion
 
         #region Public interface
-        public void RefreshColumns()
+        public void Refresh()
         {
             OracleCommand cmd = new OracleCommand(ALL_TAB_COLUMNS_SELECT, conn);
             OracleDataReader odr = cmd.ExecuteReader();
@@ -83,7 +85,7 @@ namespace oradmin
             // notify about refresh
             OnAllColumnsRefreshed();
         }
-        public bool RefreshColumns(string schema)
+        public bool Refresh(string schema)
         {
             OracleCommand cmd = new OracleCommand(ALL_TAB_COLUMNS_SCHEMA_SELECT, conn);
             // set up parameters
@@ -110,7 +112,7 @@ namespace oradmin
 
             return true;
         }
-        public bool RefreshColumns(TableManager.Table table)
+        public bool Refresh(SessionTableManager.Table table)
         {
             // set up command and parameters
             OracleCommand cmd = new OracleCommand(ALL_TAB_COLUMNS_TABLE_SELECT, conn);
@@ -147,7 +149,7 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        private void purgeTableColumnsData(TableManager.Table table)
+        private void purgeTableColumnsData(SessionTableManager.Table table)
         {
             columns.RemoveAll((column) => (column.Table == table));
         }
@@ -227,18 +229,8 @@ namespace oradmin
         public class TableColumn
         {
             #region Members
-            string tableOwner;
-            string tableName;
-            TableManager.Table table;
-            string columnName;
-            OracleDbType? dataType;
-            int dataLength;
-            int? dataPrecision, dataScale;
-            bool nullable;
-            int? defaultLength;
-            object dataDefault;
-            int? charLength;
-            bool? charUsed;
+            ColumnData data;
+            SessionTableManager.Table tableRef;
             #endregion
 
             #region Constructor
@@ -255,35 +247,123 @@ namespace oradmin
                 int? charLength,
                 bool? charUsed)
             {
-                this.tableOwner = tableOwner;
-                this.tableName = tableName;
-                this.table = null;
-                this.columnName = columnName;
-                this.dataType = dataType;
-                this.dataLength = dataLength;
-                this.dataPrecision = dataPrecision;
-                this.dataScale = dataScale;
-                this.nullable = nullable;
-                this.defaultLength = defaultLength;
-                this.dataDefault = dataDefault;
-                this.charLength = charLength;
-                this.charUsed = charUsed;
+                data = new ColumnData(tableOwner, tableName, columnName, dataType, dataLength,
+                    dataPrecision, dataScale, nullable, defaultLength, dataDefault,
+                    charLength, charUsed);
+
+                this.tableRef = null;
             }
             #endregion
 
             #region Properties
-            public TableManager.Table Table
+            public SessionTableManager.Table Table
             {
-                get { return table; }
+                get { return tableRef; }
+                set { tableRef = value; }
             }
             public string TableOwner
             {
-                get { return tableOwner; }
+                get { return data.tableOwner; }
+                set { data.tableOwner = value; }
             }
             public string ColumnName
             {
-                get { return columnName; }
-                set { columnName = value; }
+                get { return data.columnName; }
+                set { data.columnName = value; }
+            }
+            public OracleDbType? DataType
+            {
+                get { return data.dataType; }
+                set { data.dataType = value; }
+            }
+            public int DataLength
+            {
+                get { return data.dataLength; }
+                set { data.dataLength = value; }
+            }
+            public int? DataPrecision
+            {
+                get { return data.dataPrecision; }
+                set { data.dataPrecision = value; }
+            }
+            public int? DataScale
+            {
+                get { return data.dataScale; }
+                set { data.dataScale = value; }
+            }
+            public bool Nullable
+            {
+                get { return data.nullable; }
+                set { data.nullable = value; }
+            }
+            public int? DefaultLength
+            {
+                get { return data.defaultLength; }
+                set { data.defaultLength = value; }
+            }
+            public object DataDefault
+            {
+                get { return data.dataDefault; }
+                set { data.dataDefault = value; }
+            }
+            public int? CharLength
+            {
+                get { return data.charLength; }
+                set { data.charLength = value; }
+            }
+            public bool? CharUsed
+            {
+                get { return data.charUsed; }
+                set { data.charUsed = value; }
+            }
+            #endregion
+
+            #region Column data struct
+            public struct ColumnData
+            {
+                #region Members
+                public string tableOwner;
+                public string tableName;
+                public string columnName;
+                public OracleDbType? dataType;
+                public int dataLength;
+                public int? dataPrecision, dataScale;
+                public bool nullable;
+                public int? defaultLength;
+                public object dataDefault;
+                public int? charLength;
+                public bool? charUsed;
+                #endregion
+
+                #region Constructor
+                public ColumnData(
+                    string tableOwner,
+                    string tableName,
+                    string columnName,
+                    OracleDbType? dataType,
+                    int dataLength,
+                    int? dataPrecision, int? dataScale,
+                    bool nullable,
+                    int? defaultLength,
+                    object dataDefault,
+                    int? charLength,
+                    bool? charUsed)
+                {
+                    this.tableOwner = tableOwner;
+                    this.tableName = tableName;
+                    this.table = null;
+                    this.columnName = columnName;
+                    this.dataType = dataType;
+                    this.dataLength = dataLength;
+                    this.dataPrecision = dataPrecision;
+                    this.dataScale = dataScale;
+                    this.nullable = nullable;
+                    this.defaultLength = defaultLength;
+                    this.dataDefault = dataDefault;
+                    this.charLength = charLength;
+                    this.charUsed = charUsed;
+                }
+                #endregion
             }
             #endregion
         }
@@ -296,7 +376,7 @@ namespace oradmin
             SessionManager.Session session;
             OracleConnection conn;
 
-            ColumnManager manager;
+            ColumnManagerSession manager;
             ObservableCollection<TableColumn> columns = new ObservableCollection<TableColumn>();
             #endregion
 

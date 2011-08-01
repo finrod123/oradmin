@@ -127,18 +127,15 @@ namespace oradmin
         }
         #endregion
 
-        #region Properties
-        public OracleConnection Connection
+        #region Public interface
+        public void Refresh()
         {
-            get { return conn; }
+
         }
         #endregion
 
-        #region Public interface
-        public void RefreshPrivileges()
-        {
-
-        }
+        #region Object privilege class
+        
         #endregion
     }
 }

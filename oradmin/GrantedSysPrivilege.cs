@@ -8,40 +8,27 @@ namespace oradmin
     public class GrantedSysPrivilege  : PrivilegeBase
     {
         #region Members
-        string grantee;
-        UserRole granteeRef;
-        ESysPrivilege privilege;
-        bool adminOption;
-        bool directGrant;
+        GrantedSysPrivilegeData data;
         #endregion
 
         #region Constructor
         public GrantedSysPrivilege(string grantee,
                                    ESysPrivilege privilege,
-                                   bool directGrant,
-                                   bool adminOption) :
-            base(grantee)
+                                   bool adminOption)
         {
-            this.grantee = grantee;
-            this.privilege = privilege;
-            this.adminOption = adminOption;
-            this.directGrant = directGrant;
+            this.data = new GrantedSysPrivilegeData(grantee, privilege, adminOption);
         }
         #endregion
 
         #region Properties
         public ESysPrivilege Privilege
         {
-            get { return this.privilege; }
+            get { return this.data.privilege; }
         }
         public bool AdminOption
         {
-            get { return this.adminOption; }
-        }
-        public bool DirectGrant
-        {
-            get { return directGrant; }
-            set { directGrant = value; }
+            get { return this.data.adminOption; }
+            set { this.data.adminOption = value; }
         }
         #endregion
 
@@ -58,6 +45,26 @@ namespace oradmin
             return
                 this.AdminOption &&
                 !grant.AdminOption;
+        }
+        #endregion
+
+        #region GrantedSysPrivilege data class
+        public class GrantedSysPrivilegeData : PrivilegeBaseData
+        {
+            #region Members
+            public ESysPrivilege privilege;
+            public bool adminOption;
+            #endregion
+
+            #region Constructor
+            public GrantedSysPrivilegeData(string grantee, ESysPrivilege privilege,
+                bool adminOption) :
+                base(grantee)
+            {
+                this.privilege = privilege;
+                this.adminOption = adminOption;
+            }
+            #endregion
         }
         #endregion
     }

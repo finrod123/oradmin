@@ -81,7 +81,7 @@ namespace oradmin
         {
 
         }
-        public bool Refresh(TableManager.Table table)
+        public bool Refresh(SessionTableManager.Table table)
         {
 
         }
@@ -111,16 +111,16 @@ namespace oradmin
         #endregion
 
         #region IndexColumn struct
-        public struct IndexColumn
+        public class IndexColumn
         {
             #region Members
             string indexOwner;
             string indexName;
-            IndexManager.Index indexRef;
+            IndexManagerSession.Index indexRef;
             string tableOwner;
             string tableName;
             string columnName;
-            ColumnManager.TableColumn columnRef;
+            ColumnManagerSession.TableColumn columnRef;
             int columnPosition;
             bool? descend;
             #endregion
@@ -159,7 +159,7 @@ namespace oradmin
                     return this.indexName; }
                 set { this.indexName = value; }
             }
-            public IndexManager.Index Index
+            public IndexManagerSession.Index Index
             {
                 get { return this.indexRef; }
             }
@@ -184,7 +184,7 @@ namespace oradmin
                 }
                 set { this.columnName = value; }
             }
-            public ColumnManager.TableColumn Column
+            public ColumnManagerSession.TableColumn Column
             {
                 get
                 {
