@@ -42,7 +42,7 @@ namespace oradmin
         #endregion
         #region Members
         SessionManager.Session session;
-        SysPrivManager privManager;
+        SessionSysPrivManager privManager;
         OracleConnection conn;
 
         ObservableCollection<Role> roles = new ObservableCollection<Role>();

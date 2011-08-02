@@ -8,91 +8,54 @@ using Oracle.DataAccess.Types;
 
 namespace oradmin
 {
-    public abstract class UserRole
+    public abstract class UserRole : IDisposable
     {
         #region Members
         // session
         protected SessionManager.Session session;
-        protected RoleManager userRoleManager;
         // spojeni
-        protected OracleConnection conn;
-        // lokalni managery
-        protected SysPrivManager.PrivManagerLocal privManager;
-        protected RoleManager.RoleManagerLocal roleManager;
-        
+        protected OracleConnection conn;        
         // data z db
-        protected string name;
-
+        protected UserRoleData data;
         #endregion
 
         #region Constructor
-
-        public UserRole(string name, SessionManager.Session session)
+        public UserRole(UserRoleData data, SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
 
             this.session = session;
-            this.userRoleManager = session.RoleManager;
-            this.name = name;
             this.conn = session.Connection;
-            // register with events of the role manager
-            userRoleManager.RoleGrantsOfAllRolesRefreshed +=
-                new RoleGrantsOfAllRolesRefreshedHandler(manager_RoleGrantsOfAllRolesRefreshed);
-            userRoleManager.RoleGrantsRefreshed +=
-                new RoleGrantsRefreshedHandler(manager_RoleGrantsRefreshed);
-        }
-
-        #endregion
-
-        #region Public interface
-        /// <summary>
-        /// Refreshes the list of privilege and role grants
-        /// </summary>
-        public override void RefreshChanges()
-        {
-            // let privilege manager download the privilege data from the role
-            privManager.RefreshPrivileges();
-            // let role manager refresh itself
-            roleManager.RefreshGrants();
-        }
-        public virtual bool GrantSysPrivilege(GrantedSysPrivilege proposedGrant, bool adminOption)
-        {
-
+            this.data = data;
         }
         #endregion
 
         #region Properties
         public string Name
         {
-            get { return name; }
-        }
-        public abstract bool IsIndependent { get; }
-        public RoleManager.RoleManagerLocal RoleManager
-        {
-            get { return roleManager; }
-        }
-        public SysPrivManager.PrivManagerLocal PrivManager
-        {
-            get { return privManager; }
+            get { return this.data.name; }
         }
         #endregion
 
-        #region Helper methods
-        protected abstract void createManagers();
-        void manager_RoleGrantsRefreshed(ReadOnlyCollection<UserRole> affected)
+        #region UserRole data class
+        public abstract class UserRoleData
         {
-            if (affected.Contains(this))
+            #region Members
+            public string name;
+            #endregion
+
+            #region Constructor
+            public UserRoleData(string name)
             {
-                privManager.DownloadPrivileges();
-                roleManager.DownloadData();
+                this.name = name;
             }
+            #endregion
         }
-        void manager_RoleGrantsOfAllRolesRefreshed()
-        {
-            privManager.DownloadPrivileges();
-            roleManager.DownloadData();
-        }
+        #endregion
+
+        #region IDisposable Members
+        public abstract void Dispose();
         #endregion
     }
 }

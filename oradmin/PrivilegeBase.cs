@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-/* TODO: doplnit *data tridu pro dedeni v ramci trid privilegii
+/* TODO: upravit dedici tridy, aby pouzivaly VZDY zdedeny datovy kontejner "data"
  * 
  * */
 namespace oradmin

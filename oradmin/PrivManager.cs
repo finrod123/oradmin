@@ -12,6 +12,11 @@ using System.Collections.ObjectModel;
 //         load privs of one user or role or of a collection of users mixed with roles
 namespace oradmin
 {
+    #region Typedefs
+    using GrantedSysPrivilegeKey = Tuple<string, ESysPrivilege>;
+    #endregion
+
+
     public delegate void AllUsersSysPrivilegesRefreshedHandler();
     public delegate void AllRolesSysPrivilegesRefreshedHandler();
     public delegate void UsersSysPrivilegesRefreshedHandler(ReadOnlyCollection<UserManager.User> affected);
@@ -22,7 +27,7 @@ namespace oradmin
     public delegate void PrivilegeGrantedHandler(RoleManager.Role sender, ESysPrivilege privilege);
     public delegate void PrivilegesGrantedHandler(RoleManager.Role sender, ReadOnlyCollection<ESysPrivilege> privileges);
 
-    public class SysPrivManager
+    public class SessionSysPrivManager
     {
         #region SQL SELECTS
         public static const string DBA_SYS_PRIVS_SELECT = @"
@@ -72,11 +77,12 @@ namespace oradmin
         // connection handle
         OracleConnection conn;
         // list of privilege grants
-        List<GrantedSysPrivilege> grants = new List<GrantedSysPrivilege>();
+        ObservableCollection<GrantedSysPrivilege> grants =
+            new ObservableCollection<GrantedSysPrivilege>();
         #endregion
 
         #region Constructor
-        public SysPrivManager(SessionManager.Session session)
+        public SessionSysPrivManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -90,7 +96,7 @@ namespace oradmin
         /// <summary>
         /// Refreshes information about all privilege grants
         /// </summary>
-        public void RefreshUsersData()
+        public void Refresh()
         {
             OracleCommand cmd = new OracleCommand(DBA_SYS_PRIVS_USERS_SELECT, conn);
             OracleDataReader odr = cmd.ExecuteReader();
@@ -596,7 +602,7 @@ namespace oradmin
             #region Members
             protected SessionManager.Session session;
             protected OracleConnection conn;
-            protected SysPrivManager manager;
+            protected SessionSysPrivManager manager;
             protected UserRole userRole;
             protected RoleManager.RoleManagerLocal localRoleManager;
             // list of privileges
@@ -865,7 +871,7 @@ namespace oradmin
 
                     while (odr.Read())
                     {
-                        GrantedSysPrivilege grant = SysPrivManager.LoadPrivilege(odr);
+                        GrantedSysPrivilege grant = SessionSysPrivManager.LoadPrivilege(odr);
                         // add it
                         privileges.Add(grant);
                     }

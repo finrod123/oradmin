@@ -120,6 +120,7 @@
     <Compile Include="ObservableCollection.cs" />
     <Compile Include="PrivilegeBase.cs" />
     <Compile Include="PrivManager.cs" />
+    <Compile Include="ProcedureManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -143,10 +144,14 @@
     <Compile Include="SessionManager.cs" />
     <Compile Include="TableBasedPrivilege.cs" />
     <Compile Include="TableManager.cs" />
+    <Compile Include="TopLevelPlSqlUnit.cs" />
+    <Compile Include="TriggerManager.cs" />
     <Compile Include="Tuple.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserManager.cs" />
     <Compile Include="UserRole.cs" />
+    <Compile Include="UserViewManager.cs" />
+    <Compile Include="ViewManager.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

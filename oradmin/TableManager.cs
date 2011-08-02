@@ -14,6 +14,9 @@ namespace oradmin
 
     using TableLookupKey = Tuple<string, string>;
     using TableLookupDictionary = Dictionary<Tuple<string, string>, SessionTableManager.Table>;
+    using LoadedTablesLookupDictionary = Dictionary<Tuple<string, string>, SessionTableManager.Table.TableData>;
+    using TableList = List<SessionTableManager.Table>;
+    using TableLookupKeyList = List<Tuple<string, string>>;
 
     public delegate void AllTablesRefreshedHandler();
     
@@ -81,51 +84,63 @@ namespace oradmin
             if (!odr.HasRows)
                 return;
 
+            TableList newTablesList = new List<Table>();
+            TableLookupKeyList existingTablesKeys = new List<Tuple<string, string>>();
+
             while (odr.Read())
             {
-                // load a key
-                TableLookupKey key = LoadKey(odr);
-                // search a table
+                // load a table data struct
+                Table.TableData tableData = LoadTableData(odr);
+                // get its key
+                TableLookupKey key = tableData.Key;
+                // try to find it
                 Table table;
-                // if a table is new, add it
                 if (!tablesDict.TryGetValue(key, out table))
                 {
-                    table = LoadTable(odr);
-                    // add it
-                    addTable(table);
+                    newTablesList.Add(new Table(tableData, this.session, this));
                 } else
                 {
-                    // update it
-                    Table.TableData
+                    // update the table
+                    table.Update(tableData);
+                    existingTablesKeys.Add(key);
                 }
             }
 
-            // notify
-            OnAllTablesRefreshed();
+            // remove nonexistent tables
+            removeTables(existingTablesKeys);
+
+            // add new tables
+            addNewTables(newTablesList);
+
+            // refresh colu
         }
+
         #endregion
 
         #region Events
-        public event AllTablesRefreshedHandler AllTablesRefreshed;
         #endregion
 
         #region Helper methods
-        private void OnAllTablesRefreshed()
+        private void addNewTables(TableList tableDataList)
         {
-            if (AllTablesRefreshed != null)
-            {
-                AllTablesRefreshed();
-            }
+            tables.AddRange(tableDataList);
         }
-        private void addTable(Table table)
+        private void removeTables(TableLookupKeyList toDeleteList)
         {
-            tables.Add(table);
-            tablesDict.Add(new TableLookupKey(table.Owner, table.Name), table);
+            // get deleted tables keys
+            HashSet<TableLookupKey> deletedKeys =
+                new HashSet<TableLookupKey>(
+                    tablesDict.Keys.Except(toDeleteList));
+
+            // walk tables and clean the associated objects (columns, constraints...)
+
+            // delete old tables
+            tables.RemoveAll((table) => (deletedKeys.Contains(table.Key)));
         }
         #endregion
 
         #region Public static interface
-        public static Table LoadTable(OracleDataReader odr)
+        public static Table.TableData LoadTableData(OracleDataReader odr)
         {
             string owner;
             string tableName;
@@ -148,13 +163,7 @@ namespace oradmin
                     odr.GetString(odr.GetOrdinal("dropped")),
                     typeof(string), EStringToBoolConverterOption.YesNo, null);
 
-            return new Table(owner, tableName, tablespaceName, compression, dropped);
-        }
-        public static TableLookupKey LoadKey(OracleDataReader odr)
-        {
-            return Tuple.Create(
-                odr.GetString(odr.GetOrdinal("owner")),
-                odr.GetString(odr.GetOrdinal("table_name")));
+            return new Table.TableData(owner, tableName, tablespaceName, compression, dropped);
         }
         #endregion
 
@@ -164,6 +173,16 @@ namespace oradmin
             get { return view; }
         }
         #endregion
+
+
+
+
+
+
+
+
+
+
 
         #region Table class
         public class Table
@@ -179,11 +198,7 @@ namespace oradmin
 
             #region Constructor
             public Table(
-                string owner,
-                string tableName,
-                string tablespaceName,
-                bool? compression,
-                bool? dropped,
+                TableData data,
                 SessionManager.Session session,
                 SessionTableManager manager)
             {
@@ -193,9 +208,7 @@ namespace oradmin
                 this.session = session;
                 this.conn = this.session.Connection;
                 this.manager = manager;
-
-                this.data = new TableData(owner, tableName, tablespaceName,
-                    compression, dropped);
+                this.data = data;
 
                 
             }
@@ -221,6 +234,17 @@ namespace oradmin
             public bool? Dropped
             {
                 get { return data.dropped; }
+            }
+            public TableLookupKey Key
+            {
+                get { return data.Key; }
+            }
+            #endregion
+
+            #region Public interface
+            public void Update(TableData data)
+            {
+                this.data = data;
             }
             #endregion
 
@@ -248,6 +272,13 @@ namespace oradmin
                     this.tablespaceName = tablespaceName;
                     this.compression = compression;
                     this.dropped = dropped;
+                }
+                #endregion
+
+                #region Public interface
+                public TableLookupKey Key
+                {
+                    get { return new TableLookupKey(owner, tableName); }
                 }
                 #endregion
             }
