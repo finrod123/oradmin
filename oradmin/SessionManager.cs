@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Data;
 using System.Windows;
 
+//---TODO: navrhni znovu zakladni tridu pro user a role a jejich lokalni manazery
 namespace oradmin
 {
     class SessionManager
@@ -68,11 +69,28 @@ namespace oradmin
             #region Members
             OracleConnection conn;
 
+            // session user manager
             UserManager userManager;
-            RoleManager roleManager;
-            SessionSysPrivManager privManager;
-            SchemaManagerSession schemaManager;
+            // session role manager (role objects and role to role grants)
+            SessionRoleManager roleManager;
+            // session system privileges manager (grants to users and roles)
+            SessionSysPrivManager sysPrivManager;
+            // session table privileges manager (table grants for users and role)
+            SessionTabPrivManager tabPrivManager;
+            // session column privileges manager (column grants fro users and roles)
+            SessionColPrivManager colPrivManager;
+            // session schema manager (contains session object managers, e.g. table manager)
+            SessionSchemaManager schemaManager;
+            // session dependencies manager (dependencies between database objects)
+            SessionDependencyManager dependencyManager;
+            // session tablespace quotas manager
+            SessionQuotasManager quotasManager;
+            // session resource limits manager (kernel and password resource limits for users)
+            SessionResourceLimitManager resourceLimitsManager;
+            // session profile manager (groups resource limits into profiles)
+            SessionProfileManager profileManager;
 
+            // current user pointer
             UserManager.CurrentUser currentUser;
             #endregion
 
@@ -87,13 +105,25 @@ namespace oradmin
 
                 try
                 {
-                    // create managers
-                    privManager = new SessionSysPrivManager(this);
-                    roleManager = new RoleManager(this);
+                    // privilege holder entities
+                    roleManager = new SessionRoleManager(this);
                     userManager = new UserManager(this);
-                    schemaManager = new SchemaManagerSession(this);
+                    // privilege managers
+                    sysPrivManager = new SessionSysPrivManager(this);
+                    tabPrivManager = new SessionTabPrivManager(this);
+                    colPrivManager = new SessionColPrivManager(this);
+                    // dependency manager
+                    dependencyManager = new SessionDependencyManager(this);
+                    // quotas manager
+                    quotasManager = new SessionQuotasManager(this);
+                    // resource limits manager
+                    resourceLimitsManager = new SessionResourceLimitManager(this);
+                    // profile manager
+                    profileManager = new SessionProfileManager(this);
+                    // schema manager
+                    schemaManager = new SessionSchemaManager(this);
                     // store current user reference
-                    currentUser = userManager.SessionUser;
+                    currentUser = null;
                 }
                 catch (Exception e)
                 {
@@ -104,32 +134,57 @@ namespace oradmin
             #endregion
 
             #region Properties
-
             public OracleConnection Connection
             {
                 get { return conn; }
+            }
+            
+            public UserManager UserManager
+            {
+                get { return userManager; }
+            }
+            public SessionRoleManager RoleManager
+            {
+                get { return roleManager; }
             }
             public UserManager.User CurrentUser
             {
                 get { return currentUser; }
             }
-            public SessionSysPrivManager PrivManager
+
+            public SessionSysPrivManager SysPrivManager
             {
-                get { return privManager; }
+                get { return sysPrivManager; }
             }
-            public UserManager UserManager
+            public SessionTabPrivManager TabPrivManager
             {
-                get { return userManager; }
+                get { return this.tabPrivManager; }
             }
-            public RoleManager RoleManager
+            public SessionColPrivManager ColPrivManager
             {
-                get { return roleManager; }
+                get { return this.colPrivManager; }
             }
-            public SchemaManagerSession SchemaManager
+
+            public SessionDependencyManager DependencyManager
+            {
+                get { return this.dependencyManager; }
+            }
+            public SessionQuotasManager QuotasManager
+            {
+                get { return this.quotasManager; }
+            }
+            public SessionResourceLimitManager ResourceLimitsManager
+            {
+                get { return this.resourceLimitsManager; }
+            }
+            public SessionProfileManager ProfileManager
+            {
+                get { return this.profileManager; }
+            }
+            public SessionSchemaManager SchemaManager
             {
                 get { return schemaManager; }
             }
-
             #endregion
         }
     }

@@ -8,7 +8,7 @@ using Oracle.DataAccess.Types;
 // ---TODO: LoadColumn, Refresh schema and table, notify
 namespace oradmin
 {
-    class IndexColumnManager
+    class SessionIndexColumnManager
     {
         #region Members
         #region SQL SELECTS
@@ -47,7 +47,7 @@ namespace oradmin
 
 
         #region Constructor
-        public IndexColumnManager(SessionManager.Session session)
+        public SessionIndexColumnManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -116,11 +116,11 @@ namespace oradmin
             #region Members
             string indexOwner;
             string indexName;
-            IndexManagerSession.Index indexRef;
+            SessionIndexManager.Index indexRef;
             string tableOwner;
             string tableName;
             string columnName;
-            ColumnManagerSession.TableColumn columnRef;
+            SessionColumnManager.TableColumn columnRef;
             int columnPosition;
             bool? descend;
             #endregion
@@ -159,7 +159,7 @@ namespace oradmin
                     return this.indexName; }
                 set { this.indexName = value; }
             }
-            public IndexManagerSession.Index Index
+            public SessionIndexManager.Index Index
             {
                 get { return this.indexRef; }
             }
@@ -184,7 +184,7 @@ namespace oradmin
                 }
                 set { this.columnName = value; }
             }
-            public ColumnManagerSession.TableColumn Column
+            public SessionColumnManager.TableColumn Column
             {
                 get
                 {

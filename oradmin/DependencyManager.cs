@@ -7,7 +7,7 @@ using Oracle.DataAccess.Types;
 
 namespace oradmin
 {
-    class DependencyManager
+    class SessionDependencyManager
     {
         #region Members
         #region SQL SELECTS
@@ -59,7 +59,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public DependencyManager(SessionManager.Session session)
+        public SessionDependencyManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");

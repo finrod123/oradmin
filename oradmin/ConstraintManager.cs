@@ -15,7 +15,7 @@ namespace oradmin
     // properties
     // tridy privilegii
     // nacitani privilegii
-    public class ConstraintManagerSession
+    public class SessionConstraintManager
     {
         #region Members
         #region SQL SELECTS
@@ -50,20 +50,20 @@ namespace oradmin
                 table_name = :table_name";
         #endregion
         SessionManager.Session session;
-        ConstraintColumnManager columnManager;
+        SessionConstraintColumnManager columnManager;
         OracleConnection conn;
 
         List<ConstraintBase> constraints = new List<ConstraintBase>();
         #endregion
 
         #region Constructor
-        public ConstraintManagerSession(SessionManager.Session session)
+        public SessionConstraintManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
 
             this.session = session;
-            this.columnManager = new ConstraintColumnManager(this.session);
+            this.columnManager = new SessionConstraintColumnManager(this.session);
             this.conn = this.session.Connection;
         }
         #endregion
@@ -326,8 +326,8 @@ namespace oradmin
         public abstract class ColumnBasedConstraint : ConstraintBase
         {
             #region Members
-            protected List<ConstraintColumnManager.ConstraintColumn> columns =
-                new List<ConstraintColumnManager.ConstraintColumn>();
+            protected List<SessionConstraintColumnManager.ConstraintColumn> columns =
+                new List<SessionConstraintColumnManager.ConstraintColumn>();
             #endregion
 
             #region Constructor
@@ -348,7 +348,7 @@ namespace oradmin
             #endregion
 
             #region Properties
-            public ReadOnlyCollection<ConstraintColumnManager.ConstraintColumn> Columns
+            public ReadOnlyCollection<SessionConstraintColumnManager.ConstraintColumn> Columns
             {
                 get { return columns.AsReadOnly(); }
             }

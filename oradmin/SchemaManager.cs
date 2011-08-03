@@ -11,31 +11,43 @@ using Oracle.DataAccess.Types;
 //          -> implies definition of schema-level object managers!!!
 namespace oradmin
 {
-    class SchemaManagerSession
+    class SessionSchemaManager
     {
         #region Members
         SessionManager.Session session;
-        SessionTableManager tableManager;
-
-        ColumnManagerSession columnManager;
-        ConstraintManagerSession constraintManager;
-        IndexManagerSession indexManager;
-
         OracleConnection conn;
+        // managers
+        SessionTableManager tableManager;
+        SessionColumnManager columnManager;
+        SessionConstraintManager constraintManager;
+        SessionIndexManager indexManager;
+        SessionTriggerManager triggerManager;
+
+        SessionViewManager viewManager;
+        //---TODO: add PL/SQL managers
+        SessionSynonymManager synonymManager;
+        SessionSequenceManager sequenceManager;
+        
         #endregion
 
         #region Constructor
-        public SchemaManagerSession(SessionManager.Session session)
+        public SessionSchemaManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
 
             this.session = session;
             this.conn = session.Connection;
-            this.tableManager = new SessionTableManager(session);
-            this.columnManager = new ColumnManagerSession();
-            this.constraintManager = new ConstraintManagerSession();
-            this.indexManager = new IndexManagerSession();
+
+            this.tableManager = new SessionTableManager(this.session);
+            this.columnManager = new SessionColumnManager(this.session);
+            this.constraintManager = new SessionConstraintManager(this.session);
+            this.indexManager = new SessionIndexManager(this.session);
+            this.triggerManager = new SessionTriggerManager();
+
+            this.viewManager = new SessionViewManager(this.session);
+            this.sequenceManager = new SessionSequenceManager();
+            this.synonymManager = new SessionSynonymManager();
         }
         #endregion
 
@@ -44,15 +56,15 @@ namespace oradmin
         {
             get { return tableManager; }
         }
-        public ColumnManagerSession ColumnManager
+        public SessionColumnManager ColumnManager
         {
             get { return columnManager; }
         }
-        public ConstraintManagerSession ConstraintManager
+        public SessionConstraintManager ConstraintManager
         {
             get { return constraintManager; }
         }
-        public IndexManagerSession IndexManager
+        public SessionIndexManager IndexManager
         {
             get { return indexManager; }
         }

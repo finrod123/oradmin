@@ -9,7 +9,7 @@ namespace oradmin
 {
     public delegate void AllConstraintColumnsRefreshedHandler();
 
-    class ConstraintColumnManager
+    class SessionConstraintColumnManager
     {
         #region Members
         #region SQL SELECTS
@@ -44,7 +44,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public ConstraintColumnManager(SessionManager.Session session)
+        public SessionConstraintColumnManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -103,8 +103,8 @@ namespace oradmin
             string constraintName;
             string tableName;
             string columnName;
-            ConstraintManagerSession.ColumnBasedConstraint constraintRef;
-            ColumnManagerSession.TableColumn columnRef;
+            SessionConstraintManager.ColumnBasedConstraint constraintRef;
+            SessionColumnManager.TableColumn columnRef;
             int? position;
             #endregion
 
@@ -147,7 +147,7 @@ namespace oradmin
                     return constraintName;
                 }
             }
-            public ConstraintManagerSession.ColumnBasedConstraint Constraint
+            public SessionConstraintManager.ColumnBasedConstraint Constraint
             {
                 get { return this.constraintRef; }
                 set { this.constraintRef = value; }
@@ -172,7 +172,7 @@ namespace oradmin
                     return columnName;
                 }
             }
-            public ColumnManagerSession.TableColumn Column
+            public SessionColumnManager.TableColumn Column
             {
                 get { return this.columnRef; }
                 set { this.columnRef = value; }

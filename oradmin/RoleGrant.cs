@@ -11,7 +11,7 @@ namespace oradmin
 
         string grantee;
         string grantedRole;
-        RoleManager.Role roleReference;
+        SessionRoleManager.Role roleReference;
         bool weakReference;
         bool adminOption;
         bool directGrant;
@@ -59,7 +59,7 @@ namespace oradmin
         {
             get { return this.grantedRole; }
         }
-        public RoleManager.Role Role
+        public SessionRoleManager.Role Role
         {
             get { return this.roleReference; }
             set

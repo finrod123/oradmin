@@ -9,7 +9,7 @@ using Oracle.DataAccess.Types;
 
 namespace oradmin
 {
-    public class QuotasManager
+    public class SessionQuotasManager
     {
         #region Members
         #region SQL SELECTS
@@ -32,7 +32,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public QuotasManager(SessionManager.Session session)
+        public SessionQuotasManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");

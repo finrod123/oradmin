@@ -14,7 +14,7 @@ namespace oradmin
 {
     public delegate void AllColumnsRefreshedHandler();
 
-    class ColumnManagerSession
+    class SessionColumnManager
     {
         #region Members
         #region SQL SELECTS
@@ -51,11 +51,11 @@ namespace oradmin
         SessionManager.Session session;
         OracleConnection conn;
 
-        List<ColumnManagerSession.TableColumn> columns = new List<TableColumn>();
+        List<SessionColumnManager.TableColumn> columns = new List<TableColumn>();
         #endregion
 
         #region Constructor
-        public ColumnManagerSession(SessionManager.Session session)
+        public SessionColumnManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
@@ -376,7 +376,7 @@ namespace oradmin
             SessionManager.Session session;
             OracleConnection conn;
 
-            ColumnManagerSession manager;
+            SessionColumnManager manager;
             ObservableCollection<TableColumn> columns = new ObservableCollection<TableColumn>();
             #endregion
 

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace oradmin
 {
-    class ColPrivManager
+    class SessionColPrivManager
     {
         #region Members
         #region SQL SELECTS
@@ -110,6 +110,13 @@ namespace oradmin
             FROM
                 USER_COL_PRIVS_RECD";
         #endregion
+        #endregion
+
+        #region Constructor
+        public SessionColPrivManager(SessionManager.Session session)
+        {
+
+        }
         #endregion
     }
 }

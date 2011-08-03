@@ -20,12 +20,12 @@ namespace oradmin
     public delegate void AllUsersSysPrivilegesRefreshedHandler();
     public delegate void AllRolesSysPrivilegesRefreshedHandler();
     public delegate void UsersSysPrivilegesRefreshedHandler(ReadOnlyCollection<UserManager.User> affected);
-    public delegate void RolesSysPrivilegesRefreshedHandler(ReadOnlyCollection<RoleManager.Role> affected);
+    public delegate void RolesSysPrivilegesRefreshedHandler(ReadOnlyCollection<SessionRoleManager.Role> affected);
     public delegate void UsersRolesSysPrivilegesRefreshedHandler(ReadOnlyCollection<UserRole> affected);
     public delegate void UsersRolesSysPrivilegesRefreshedHandler(ReadOnlyCollection<UserRole> affected);
 
-    public delegate void PrivilegeGrantedHandler(RoleManager.Role sender, ESysPrivilege privilege);
-    public delegate void PrivilegesGrantedHandler(RoleManager.Role sender, ReadOnlyCollection<ESysPrivilege> privileges);
+    public delegate void PrivilegeGrantedHandler(SessionRoleManager.Role sender, ESysPrivilege privilege);
+    public delegate void PrivilegesGrantedHandler(SessionRoleManager.Role sender, ReadOnlyCollection<ESysPrivilege> privileges);
 
     public class SessionSysPrivManager
     {
@@ -154,7 +154,7 @@ namespace oradmin
                 OnAllRolesSysPrivilegesRefreshed();
             }
         }
-        public void RefreshRolesData(ReadOnlyCollection<RoleManager.Role> roles)
+        public void RefreshRolesData(ReadOnlyCollection<SessionRoleManager.Role> roles)
         {
             StringCollection roleNames = (from userRole in roles select userRole.Name) as StringCollection;
 
@@ -187,7 +187,7 @@ namespace oradmin
                 OnRolesSysPrivilegesRefreshed(roles);
             }
         }
-        public bool RefreshRoleData(RoleManager.Role role)
+        public bool RefreshRoleData(SessionRoleManager.Role role)
         {
             if (refreshUserRoleData(role))
                 return true;
@@ -226,10 +226,10 @@ namespace oradmin
             else
             {
                 RefreshRolesData(
-                    new ReadOnlyCollection<RoleManager.Role>
+                    new ReadOnlyCollection<SessionRoleManager.Role>
                         ((from userRole in usersRoles
-                          where userRole is RoleManager.Role
-                          select userRole as RoleManager.Role).ToList<RoleManager.Role>())); 
+                          where userRole is SessionRoleManager.Role
+                          select userRole as SessionRoleManager.Role).ToList<SessionRoleManager.Role>())); 
             }
         }
 
@@ -240,7 +240,7 @@ namespace oradmin
 
             return privManager;
         }
-        public RolePrivManagerLocal CreateRolePrivLocalManager(RoleManager.Role role)
+        public RolePrivManagerLocal CreateRolePrivLocalManager(SessionRoleManager.Role role)
         {
             return new RolePrivManagerLocal(session, role);
         }
@@ -290,7 +290,7 @@ namespace oradmin
                 UsersSysPrivilegesRefreshed(affected);
             }
         }
-        private void OnRolesSysPrivilegesRefreshed(ReadOnlyCollection<RoleManager.Role> affected)
+        private void OnRolesSysPrivilegesRefreshed(ReadOnlyCollection<SessionRoleManager.Role> affected)
         {
             if (RolesSysPrivilegesRefreshed != null)
             {
@@ -359,12 +359,12 @@ namespace oradmin
                 UsersRolesSysPrivilegesRefreshed(affected);
             }
         }
-        private void privManager_PrivilegeGranted(RoleManager.Role sender, ESysPrivilege privilege)
+        private void privManager_PrivilegeGranted(SessionRoleManager.Role sender, ESysPrivilege privilege)
         {
             // create a queue
             var queue = CreateDistributionQueue(
                 new {
-                    Source = default(RoleManager.Role),
+                    Source = default(SessionRoleManager.Role),
                     Destination = default(UserRole),
                     Privilege = default(ESysPrivilege)
                 });
@@ -388,18 +388,18 @@ namespace oradmin
                     // enqueue dependants
                     foreach (UserRole dependant in destination.RoleManager.Dependants)
                     {
-                        queue.Enqueue(new { Source = destination as RoleManager.Role, Destination = dependant, Privilege = privilege });
+                        queue.Enqueue(new { Source = destination as SessionRoleManager.Role, Destination = dependant, Privilege = privilege });
                     }
                 }
             }
         }
-        private void privManager_PrivilegesGranted(RoleManager.Role sender,
+        private void privManager_PrivilegesGranted(SessionRoleManager.Role sender,
                                                    ReadOnlyCollection<ESysPrivilege> privileges)
         {
             // create a queue
             var queue = CreateDistributionQueue(
                 new {
-                    Source = default(RoleManager.Role),
+                    Source = default(SessionRoleManager.Role),
                     Destination = default(UserRole),
                     Privileges = default(ReadOnlyCollection<ESysPrivilege>)
                 });
@@ -423,7 +423,7 @@ namespace oradmin
                     // enqueue dependants
                     foreach (UserRole dependant in destination.RoleManager.Dependants)
                     {
-                        queue.Enqueue(new { Source = destination as RoleManager.Role, Destination = dependant, Privilege = privilege });
+                        queue.Enqueue(new { Source = destination as SessionRoleManager.Role, Destination = dependant, Privilege = privilege });
                     }
                 }
             }
@@ -604,7 +604,7 @@ namespace oradmin
             protected OracleConnection conn;
             protected SessionSysPrivManager manager;
             protected UserRole userRole;
-            protected RoleManager.RoleManagerLocal localRoleManager;
+            protected SessionRoleManager.RoleManagerLocal localRoleManager;
             // list of privileges
             protected ObservableCollection<GrantedSysPrivilege> privileges = new ObservableCollection<GrantedSysPrivilege>();
             // default view of privileges
@@ -617,7 +617,7 @@ namespace oradmin
                 if (session == null || userRole == null)
                     throw new ArgumentNullException("Session or User");
 
-                this.manager = session.PrivManager;
+                this.manager = session.SysPrivManager;
                 this.conn = session.Connection;
                 this.userRole = userRole;
                 this.localRoleManager = userRole.RoleManager;
@@ -646,7 +646,7 @@ namespace oradmin
                 foreach (RoleGrant grant in directRoleGrants)
                 {
                     // get role reference
-                    RoleManager.Role grantedRole = grant.Role;
+                    SessionRoleManager.Role grantedRole = grant.Role;
                     // get all of its privilege grants
                     ReadOnlyCollection<GrantedSysPrivilege> privs =
                         grantedRole.PrivManager.PrivilegeGrants;
@@ -666,7 +666,7 @@ namespace oradmin
                 return new GrantedSysPrivilege(userRole.Name, grant.Privilege, false, false);
             }
 
-            public bool DownloadPrivilegeChange(ESysPrivilege privilege, RoleManager.Role from)
+            public bool DownloadPrivilegeChange(ESysPrivilege privilege, SessionRoleManager.Role from)
             {
                 GrantedSysPrivilege downloaded;
                 RolePrivManagerLocal rolePrivManager = from.PrivManager as RolePrivManagerLocal;
@@ -681,7 +681,7 @@ namespace oradmin
                 return false;
             }
             public ReadOnlyCollection<GrantedSysPrivilege> DownloadPrivilegesChange(
-                ReadOnlyCollection<ESysPrivilege> privs, RoleManager.Role from)
+                ReadOnlyCollection<ESysPrivilege> privs, SessionRoleManager.Role from)
             {
                 RolePrivManagerLocal rolePrivManager = from.PrivManager as RolePrivManagerLocal;
                 ReadOnlyCollection<GrantedSysPrivilege> grants;
@@ -744,14 +744,14 @@ namespace oradmin
             {
                 if (PrivilegeGranted != null)
                 {
-                    PrivilegeGranted(this.userRole as RoleManager.Role, privilege);
+                    PrivilegeGranted(this.userRole as SessionRoleManager.Role, privilege);
                 }
             }
             private void OnPrivilegesGranted(IList<ESysPrivilege> privileges)
             {
                 if (PrivilegesGranted != null)
                 {
-                    PrivilegesGranted(this.userRole as RoleManager.Role, new ReadOnlyCollection<ESysPrivilege>(privileges));
+                    PrivilegesGranted(this.userRole as SessionRoleManager.Role, new ReadOnlyCollection<ESysPrivilege>(privileges));
                 }
             }
             #endregion
@@ -791,7 +791,7 @@ namespace oradmin
         public class RolePrivManagerLocal : PrivManagerLocal
         {
             #region Constructor
-            public RolePrivManagerLocal(SessionManager.Session session, RoleManager.Role role) :
+            public RolePrivManagerLocal(SessionManager.Session session, SessionRoleManager.Role role) :
                 base(session, role)
             { }
             #endregion

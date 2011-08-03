@@ -10,7 +10,7 @@ namespace oradmin
 {
     public delegate void AllIndexesRefreshedHandler();
 
-    class IndexManagerSession
+    class SessionIndexManager
     {
         #region Members
         #region SQL SELECTS
@@ -47,11 +47,14 @@ namespace oradmin
         SessionManager.Session session;
         OracleConnection conn;
 
+        // managers
+        SessionIndexColumnManager indexColumnManager;
+
         List<Index> indexes = new List<Index>();
         #endregion
 
         #region Constructor
-        public IndexManagerSession(SessionManager.Session session)
+        public SessionIndexManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");

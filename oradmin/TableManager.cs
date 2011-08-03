@@ -47,10 +47,10 @@ namespace oradmin
                 table_name = :table_name";
         #endregion
         SessionManager.Session session;
-        SchemaManagerSession manager;
-        ColumnManagerSession columnManager;
-        ConstraintManagerSession constraintManager;
-        IndexManagerSession indexManager;
+        SessionSchemaManager manager;
+        SessionColumnManager columnManager;
+        SessionConstraintManager constraintManager;
+        SessionIndexManager indexManager;
         OracleConnection conn;
         // structures to hold tables
         ObservableCollection<Table> tables = new ObservableCollection<Table>();

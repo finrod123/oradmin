@@ -13,7 +13,7 @@ namespace oradmin
 {
     public delegate void ResourceLimitsRefreshedHandler();
 
-    public class ResourceLimitManager
+    public class SessionResourceLimitManager
     {
         #region Members
         #region SQL SELECTS
@@ -47,7 +47,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public ResourceLimitManager(SessionManager.Session session)
+        public SessionResourceLimitManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");

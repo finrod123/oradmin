@@ -11,7 +11,7 @@ using oradmin;
 
 namespace oradmin
 {
-    class RoleManager
+    class SessionRoleManager
     {
         #region Constants
 
@@ -53,14 +53,14 @@ namespace oradmin
 
         #region Constructor
 
-        public RoleManager(SessionManager.Session session)
+        public SessionRoleManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
 
             this.session = session;
             this.conn = session.Connection;
-            privManager = session.PrivManager;
+            privManager = session.SysPrivManager;
         }
 
         #endregion
@@ -504,7 +504,7 @@ namespace oradmin
             protected override void createManagers()
             {
                 // create local priv manager
-                privManager = session.PrivManager.CreateRolePrivLocalManager(this);
+                privManager = session.SysPrivManager.CreateRolePrivLocalManager(this);
                 // create local role manager
                 roleManager = userRoleManager.CreateRoleLocalManager(this);
             }
@@ -532,7 +532,7 @@ namespace oradmin
             #region Members
             protected int directGrantCount = 0;
             protected SessionManager.Session session;
-            protected RoleManager manager;
+            protected SessionRoleManager manager;
             protected OracleConnection conn;
             protected UserRole userRole;
 

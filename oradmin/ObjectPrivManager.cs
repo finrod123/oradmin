@@ -7,7 +7,7 @@ using Oracle.DataAccess.Types;
 
 namespace oradmin
 {
-    class TabPrivManager
+    class SessionTabPrivManager
     {
         #region Members
         #region SQL SELECTS
@@ -117,7 +117,7 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public TabPrivManager(SessionManager.Session session)
+        public SessionTabPrivManager(SessionManager.Session session)
         {
             if (session == null)
                 throw new ArgumentNullException("Session");
