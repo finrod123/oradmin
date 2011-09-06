@@ -106,8 +106,8 @@ namespace oradmin
                 try
                 {
                     // privilege holder entities
-                    roleManager = new SessionRoleManager(this);
                     userManager = new UserManager(this);
+                    roleManager = new SessionRoleManager(this);
                     // privilege managers
                     sysPrivManager = new SessionSysPrivManager(this);
                     tabPrivManager = new SessionTabPrivManager(this);

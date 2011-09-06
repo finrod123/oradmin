@@ -47,43 +47,7 @@ namespace oradmin
             this.conn = session.Connection;
             // create the user view
             view = new ListCollectionView(users);
-            // set up handlers
-            users.CollectionChanged += new NotifyCollectionChangedEventHandler(users_CollectionChanged);
-        }
-
-        void users_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            bool add = false,
-                 remove = false;
-
-            switch (e.Action)
-            {
-                case NotifyCollectionChangedAction.Add:
-                    add = true;
-                    break;
-                case NotifyCollectionChangedAction.Remove:
-                    remove = true;
-                    break;
-                case NotifyCollectionChangedAction.Reset:
-                    add = remove = true;
-                    break;
-            }
-
-            if (add && e.NewItems != null)
-            {
-                foreach (User user in e.NewItems)
-                {
-                    usersDict.Add(user.Name, user);
-                }
-            }
-
-            if (remove && e.OldItems != null)
-            {
-                foreach (User user in e.OldItems)
-                {
-                    usersDict.Remove(user.Name);
-                }
-            }
+            
         }
         #endregion
 
