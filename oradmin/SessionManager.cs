@@ -23,16 +23,13 @@ namespace oradmin
         #endregion
 
         #region Constructor
-
         public SessionManager()
         {
             sessionsDefaultView = CollectionViewSource.GetDefaultView(sessions) as ListCollectionView;
         }
-
         #endregion
 
         #region Public interface
-
         public void AddSession(OracleConnection conn)
         {
             try
@@ -52,7 +49,6 @@ namespace oradmin
                 MessageBox.Show(string.Format("Exception caught:\n{0}", e.Message));
             }
         }
-
         #endregion
 
         #region Properties
@@ -68,67 +64,17 @@ namespace oradmin
         {
             #region Members
             OracleConnection conn;
-
-            // session user manager
             UserManager userManager;
-            // session role manager (role objects and role to role grants)
-            SessionRoleManager roleManager;
-            // session system privileges manager (grants to users and roles)
-            SessionSysPrivManager sysPrivManager;
-            // session table privileges manager (table grants for users and role)
-            SessionTabPrivManager tabPrivManager;
-            // session column privileges manager (column grants fro users and roles)
-            SessionColPrivManager colPrivManager;
-            // session schema manager (contains session object managers, e.g. table manager)
-            SessionSchemaManager schemaManager;
-            // session dependencies manager (dependencies between database objects)
-            SessionDependencyManager dependencyManager;
-            // session tablespace quotas manager
-            SessionQuotasManager quotasManager;
-            // session resource limits manager (kernel and password resource limits for users)
-            SessionResourceLimitManager resourceLimitsManager;
-            // session profile manager (groups resource limits into profiles)
-            SessionProfileManager profileManager;
-
-            // current user pointer
-            UserManager.CurrentUser currentUser;
             #endregion
 
             #region Constructor
 
             public Session(OracleConnection conn)
             {
-                if(conn == null)
-                    throw new ArgumentNullException("Connection");
+                // !!! TODO: session params managers!!!
 
-                this.conn = conn;
-
-                try
-                {
-                    // privilege holder entities
-                    userManager = new UserManager(this);
-                    roleManager = new SessionRoleManager(this);
-                    // privilege managers
-                    sysPrivManager = new SessionSysPrivManager(this);
-                    tabPrivManager = new SessionTabPrivManager(this);
-                    colPrivManager = new SessionColPrivManager(this);
-                    // dependency manager
-                    dependencyManager = new SessionDependencyManager(this);
-                    // quotas manager
-                    quotasManager = new SessionQuotasManager(this);
-                    // resource limits manager
-                    resourceLimitsManager = new SessionResourceLimitManager(this);
-                    // profile manager
-                    profileManager = new SessionProfileManager(this);
-                    // schema manager
-                    schemaManager = new SessionSchemaManager(this);
-                    // store current user reference
-                    currentUser = null;
-                }
-                catch (Exception e)
-                {
-                    MessageBox.Show(string.Format("Exception caught:\n{0}", e.Message));
-                }
+                // user manager
+                userManager = new UserManager(this);
             }
 
             #endregion
@@ -137,53 +83,6 @@ namespace oradmin
             public OracleConnection Connection
             {
                 get { return conn; }
-            }
-            
-            public UserManager UserManager
-            {
-                get { return userManager; }
-            }
-            public SessionRoleManager RoleManager
-            {
-                get { return roleManager; }
-            }
-            public UserManager.User CurrentUser
-            {
-                get { return currentUser; }
-            }
-
-            public SessionSysPrivManager SysPrivManager
-            {
-                get { return sysPrivManager; }
-            }
-            public SessionTabPrivManager TabPrivManager
-            {
-                get { return this.tabPrivManager; }
-            }
-            public SessionColPrivManager ColPrivManager
-            {
-                get { return this.colPrivManager; }
-            }
-
-            public SessionDependencyManager DependencyManager
-            {
-                get { return this.dependencyManager; }
-            }
-            public SessionQuotasManager QuotasManager
-            {
-                get { return this.quotasManager; }
-            }
-            public SessionResourceLimitManager ResourceLimitsManager
-            {
-                get { return this.resourceLimitsManager; }
-            }
-            public SessionProfileManager ProfileManager
-            {
-                get { return this.profileManager; }
-            }
-            public SessionSchemaManager SchemaManager
-            {
-                get { return schemaManager; }
             }
             #endregion
         }

@@ -199,7 +199,7 @@ namespace oradmin
 
         #region User class
 
-        public class User : UserRole
+        public class User : PrivilegeHolderEntity
         {
             #region Members
             SessionManager.Session session;
@@ -253,7 +253,7 @@ namespace oradmin
 
 
             #region User data class
-            public class UserData : UserRoleData
+            public class UserData : PrivilegeHolderEntityData
             {
                 #region Members
                 public readonly decimal id;

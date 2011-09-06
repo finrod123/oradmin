@@ -33,7 +33,7 @@ namespace oradmin
         #endregion
 
         #region Public interface
-        public GrantedSysPrivilege CreateGrant(UserRole userRole, bool adminOption)
+        public GrantedSysPrivilege CreateGrant(PrivilegeHolderEntity userRole, bool adminOption)
         {
             return new GrantedSysPrivilege(userRole.Name, privilege, true, adminOption);
         }

@@ -93,7 +93,7 @@ namespace oradmin
                 from grant in currentUserGrants
                 select grant;
         }
-        protected IEnumerable<RoleGrant> downloadRoleGrants(UserRole userRole)
+        protected IEnumerable<RoleGrant> downloadRoleGrants(PrivilegeHolderEntity userRole)
         {
             return
                 from grant in rolesGrants
@@ -368,7 +368,7 @@ namespace oradmin
                 RoleGrantsOfAllRolesRefreshed();
             }
         }
-        private void OnRoleGrantsRefreshed(ReadOnlyCollection<UserRole> affected)
+        private void OnRoleGrantsRefreshed(ReadOnlyCollection<PrivilegeHolderEntity> affected)
         {
             if (RoleGrantsRefreshed != null)
             {
@@ -395,7 +395,7 @@ namespace oradmin
             // start the BFS and distribution of grants
             distributeChanges(independentRoles);
         }
-        void updateChanges(ReadOnlyCollection<UserRole> affected)
+        void updateChanges(ReadOnlyCollection<PrivilegeHolderEntity> affected)
         {
             // notify roles
             OnRoleGrantsRefreshed(affected);
@@ -424,7 +424,7 @@ namespace oradmin
         /// </summary>
         /// <param name="affected">ReadOnly collection of affected roles</param>
         /// <returns>ReadOnly collection of independent roles</returns>
-        ReadOnlyCollection<Role> findIndependentRoles(ReadOnlyCollection<UserRole> affected)
+        ReadOnlyCollection<Role> findIndependentRoles(ReadOnlyCollection<PrivilegeHolderEntity> affected)
         {
             return
                 (from userRole in affected
@@ -438,11 +438,11 @@ namespace oradmin
         /// <param name="initialQueue">Changed roles to start with</param>
         void distributeChanges(ReadOnlyCollection<Role> initialQueue)
         {
-            Queue<UserRole> queue = new Queue<UserRole>(initialQueue as IEnumerable<UserRole>);
+            Queue<PrivilegeHolderEntity> queue = new Queue<PrivilegeHolderEntity>(initialQueue as IEnumerable<PrivilegeHolderEntity>);
             // start BFS
             while (queue.Count > 0)
             {
-                UserRole userRole = queue.Dequeue();
+                PrivilegeHolderEntity userRole = queue.Dequeue();
                 // refresh changes in a USERROLE
                 if (!userRole.IsIndependent)
                     userRole.RefreshChanges();
@@ -452,9 +452,9 @@ namespace oradmin
                 if (roleManager.HasDependants)
                 {
                     //... get the list of them
-                    ReadOnlyCollection<UserRole> dependants = roleManager.Dependants;
+                    ReadOnlyCollection<PrivilegeHolderEntity> dependants = roleManager.Dependants;
                     // insert them into a queue
-                    foreach (UserRole ur in dependants)
+                    foreach (PrivilegeHolderEntity ur in dependants)
                     {
                         queue.Enqueue(ur);
                     }
@@ -474,7 +474,7 @@ namespace oradmin
 
         #region Role class
 
-        public class Role : UserRole
+        public class Role : PrivilegeHolderEntity
         {
             #region Members
             bool passwordRequired;
@@ -534,19 +534,19 @@ namespace oradmin
             protected SessionManager.Session session;
             protected SessionRoleManager manager;
             protected OracleConnection conn;
-            protected UserRole userRole;
+            protected PrivilegeHolderEntity userRole;
 
             protected ObservableCollection<RoleGrant> roleGrants =
                 new ObservableCollection<RoleGrant>();
             protected List<RoleGrant> directRoleGrants =
                 new List<RoleGrant>();
-            protected Dictionary<string, UserRole> dependants =
-                new Dictionary<string, UserRole>();
+            protected Dictionary<string, PrivilegeHolderEntity> dependants =
+                new Dictionary<string, PrivilegeHolderEntity>();
             #endregion
 
             #region Constructor
 
-            public RoleManagerLocal(SessionManager.Session session, UserRole userRole)
+            public RoleManagerLocal(SessionManager.Session session, PrivilegeHolderEntity userRole)
             {
                 if (session == null)
                     throw new ArgumentNullException("Session");
@@ -658,9 +658,9 @@ namespace oradmin
             {
                 get { return dependants.Count > 0;}
             }
-            public ReadOnlyCollection<UserRole> Dependants
+            public ReadOnlyCollection<PrivilegeHolderEntity> Dependants
             {
-                get { return dependants.Values.ToList<UserRole>().AsReadOnly(); }
+                get { return dependants.Values.ToList<PrivilegeHolderEntity>().AsReadOnly(); }
             }
             public ReadOnlyCollection<RoleGrant> RoleGrants
             {
@@ -687,14 +687,14 @@ namespace oradmin
             #endregion
 
             #region Public interface
-            public void AddDependant(UserRole userRole)
+            public void AddDependant(PrivilegeHolderEntity userRole)
             {
                 if (!dependants.ContainsKey(userRole.Name))
                 {
                     dependants.Add(userRole.Name, userRole);
                 }
             }
-            public void RemoveDependant(UserRole userRole)
+            public void RemoveDependant(PrivilegeHolderEntity userRole)
             {
                 dependants.Remove(userRole.Name);
 
@@ -817,5 +817,5 @@ namespace oradmin
 
 
     public delegate void RoleGrantsOfAllRolesRefreshedHandler();
-    public delegate void RoleGrantsRefreshedHandler(ReadOnlyCollection<UserRole> affected);
+    public delegate void RoleGrantsRefreshedHandler(ReadOnlyCollection<PrivilegeHolderEntity> affected);
 }

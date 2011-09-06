@@ -12,7 +12,7 @@ namespace oradmin
     {
         #region Members
         protected PrivilegeBaseData data;
-        protected UserRole granteeRef;
+        protected PrivilegeHolderEntity granteeRef;
         #endregion
 
         #region Constructor
@@ -24,7 +24,7 @@ namespace oradmin
         {
             get { return data.grantee; }
         }
-        public UserRole GranteeRef
+        public PrivilegeHolderEntity GranteeRef
         {
             get { return this.granteeRef; }
             set { this.granteeRef = value; }
