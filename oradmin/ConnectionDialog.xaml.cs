@@ -36,7 +36,6 @@ namespace oradmin
             // set data context
             DataContext = this.connection;
             // begin editing connection
-            this.connection.BeginEdit();
         }
 
         #region Helper methods

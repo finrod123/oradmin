@@ -7,15 +7,32 @@ using System.Text;
 
 namespace oradmin
 {
+    public enum EDataVersion
+    {
+        Commited,
+        Proposed
+    }
+
     public interface IConnection
     {
-        string Name { get; }
-        string Comment { get; }
-        string UserName { get; }
-        EDbaPrivileges DbaPrivileges { get; }
-        bool OsAuthenticate { get; }
-        ENamingMethod NamingMethod { get; }
-        string TnsName { get; }
+        string Name { get; set; }
+        string Comment { get; set; }
+        string UserName { get; set; }
+        EDbaPrivileges DbaPrivileges { get; set; }
+        bool OsAuthenticate { get; set; }
+        ENamingMethod NamingMethod { get; set; }
+        string TnsName { get; set; }
+    }
+
+    public interface IVersionedConnection
+    {
+        string Name(EDataVersion version);
+        string Comment(EDataVersion version);
+        string UserName(EDataVersion version);
+        EDbaPrivileges DbaPrivileges(EDataVersion version);
+        bool OsAuthenticate(EDataVersion version);
+        ENamingMethod NamingMethod(EDataVersion version);
+        string TnsName(EDataVersion version);
     }
 
     public struct ConnectionData : IConnection
@@ -98,7 +115,7 @@ namespace oradmin
         }
         #endregion
     }
-    public class Connection : IConnection, IConnectDescriptor,
+    public class Connection : IConnection, IVersionedConnection, IConnectDescriptor,
         INotifyPropertyChanged, IEditableObject,
         IValidatableObject<EConnectionError>
     {
@@ -111,8 +128,9 @@ namespace oradmin
         ConnectDescriptor connectDescriptor;
         // editable pattern data
         bool isEditing = false;
+        bool hasChanged = false;
         // sequence generator
-        SequenceGenerator generator = new SequenceGenerator(0, int.MaxValue, 1, false);
+        public static SequenceGenerator IdGenerator = new SequenceGenerator(0, int.MaxValue, 1, false);
         // validation data
         bool hasErrors = false;
         Dictionary<EConnectionError, ObjectError<EConnectionError>> errors =
@@ -125,7 +143,7 @@ namespace oradmin
             if (manager == null)
                 throw new ArgumentNullException("Connection manager");
 
-            this.id = generator.Next;
+            this.id = IdGenerator.Next;
             this.manager = manager;
             connectDescriptor = new ConnectDescriptor();
             // set up events
@@ -480,6 +498,45 @@ namespace oradmin
         {
             return errors.ContainsKey(error);
         }
+        #endregion
+
+        #region IVersionedConnection Members
+
+        string IVersionedConnection.Name(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
+        string IVersionedConnection.Comment(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
+        string IVersionedConnection.UserName(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
+        EDbaPrivileges IVersionedConnection.DbaPrivileges(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IVersionedConnection.OsAuthenticate(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
+        ENamingMethod IVersionedConnection.NamingMethod(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
+        string IVersionedConnection.TnsName(EDataVersion version)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }

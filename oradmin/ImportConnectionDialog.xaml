@@ -1,0 +1,17 @@
+﻿<Window x:Class="oradmin.ImportConnectionDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="ImportConnectionDialog" Height="300" Width="300">
+    <Grid>
+        <Grid.Resources>
+            <Style x:Key="connectionBoxStyle">
+                
+            </Style>
+            <DataTemplate x:Key="connectionDataTemplate">
+                
+            </DataTemplate>
+        </Grid.Resources>
+        <ItemsControl Name="connectionsView" ItemTemplate="{StaticResource connectionDataTemplate}"
+                      ItemContainerStyle="{StaticResource connectionBoxStyle}" />
+    </Grid>
+</Window>

@@ -16,6 +16,7 @@
     <WarningLevel>4</WarningLevel>
     <StartupObject>
     </StartupObject>
+    <TargetFrameworkSubset>Full</TargetFrameworkSubset>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -37,6 +38,9 @@
   <ItemGroup>
     <Reference Include="Oracle.DataAccess, Version=10.2.0.100, Culture=neutral, PublicKeyToken=89b483f429c47342" />
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -80,6 +84,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="ImportConnectionDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Window1.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -94,6 +102,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EntityManager.cs" />
+    <Compile Include="EntityStateManager.cs" />
+    <Compile Include="Validator.cs" />
     <Compile Include="ColPrivManager.cs" />
     <Compile Include="ColumnManager.cs" />
     <Compile Include="ConnectDescriptor.cs" />
@@ -110,10 +121,15 @@
     <Compile Include="Converters.cs" />
     <Compile Include="DataManager.cs" />
     <Compile Include="DependencyManager.cs" />
+    <Compile Include="EntityAdapter.cs" />
+    <Compile Include="EntityObject.cs" />
     <Compile Include="EnumConverters.cs" />
     <Compile Include="GrantedColPrivilege.cs" />
     <Compile Include="GrantedSysPrivilege.cs" />
     <Compile Include="GrantedTabPrivilege.cs" />
+    <Compile Include="ImportConnectionDialog.xaml.cs">
+      <DependentUpon>ImportConnectionDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="IndexColumnManager.cs" />
     <Compile Include="IndexManager.cs" />
     <Compile Include="LocalRoleGrantManagers.cs" />
@@ -176,11 +192,13 @@
     <Compile Include="PrivilegeHolderEntity.cs" />
     <Compile Include="UserViewManager.cs" />
     <Compile Include="ValidationInterface.cs" />
+    <Compile Include="VersionedField.cs" />
     <Compile Include="ViewManager.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="app.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
