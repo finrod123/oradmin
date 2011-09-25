@@ -14,7 +14,28 @@ namespace oradmin
     using PropertyAttributesLists = IEnumerable<KeyValuePair<string, IEnumerable<Attribute>>>;
     using EntityAttributesList = IEnumerable<Attribute>;
 
-    public interface IEntityWithErrorState
+    public delegate void PropertyChangedPassingValueHandler(object sender, PropertyChangedPassingValueEventArgs e);
+    public class PropertyChangedPassingValueEventArgs : PropertyChangedEventArgs
+    {
+        #region Constructor
+		public PropertyChangedPassingValueEventArgs(string propertyName, object value) :
+            base(propertyName)
+        {
+            Value = value;
+        } 
+	    #endregion
+
+        #region Properties
+        public object Value { get; private set; } 
+        #endregion
+    }
+
+    public interface INotifyPropertyChangedPassingValue
+    {
+        event PropertyChangedPassingValueHandler PropertyChangedPassingValue;
+    }
+
+    public interface IEntityWithErrorReporting
     {
         bool HasErrors { get; }
     }
@@ -29,16 +50,9 @@ namespace oradmin
         void SaveChanges();
     }
 
-    public interface IEntityChangeTracker
-    {
-        EEntityState EntityState { get; }
-        void EntityMemberChanging(string member);
-        void EntityMemberChanged(string member, object value);
-    }
-
     public interface IEntityWithChangeTracker
     {
-        void SetChangeTracker(IEntityChangeTracker tracker);
+        IEntityChangeTracker Tracker { get; set; }
     }
 
     public class EntityKey : IEquatable<EntityKey>
@@ -49,10 +63,13 @@ namespace oradmin
             if (entity == null)
                 throw new ArgumentNullException("entity");
 
+            if (entity.EntityKey != null)
+                throw new ApplicationException("Entity already associated!");
+
             Entity = entity;
         }
         #endregion
-        
+
         #region Properties
         public EntityObject Entity { get; private set; }
         #endregion
@@ -60,7 +77,7 @@ namespace oradmin
         #region IEquatable<EntityKey> Members
         public bool Equals(EntityKey other)
         {
-            return object.ReferenceEquals(this, other);
+            return object.ReferenceEquals(this.Entity, other.Entity);
         }
         #endregion
 
@@ -88,13 +105,15 @@ namespace oradmin
 
     public abstract class EntityObject : IEditableObject, IRevertibleChangeTracking,
         INotifyPropertyChanging, INotifyPropertyChanged, IDataErrorInfo, IEntityWithChangeTracker,
-        IUpdatableEntityObject, IRefreshableEntityObject, IEntityWithErrorState
+        IUpdatableEntityObject, IRefreshableEntityObject, IEntityWithErrorReporting,
+        INotifyPropertyChangedPassingValue, IEntityDataContainer
     {
         #region Members
-        protected EntityKey key;
-        protected EEntityState state;
+        protected EntityKey entityKey;
+        protected EEntityState entityState;
         protected IEntityValidator validator;
         protected IEntityChangeTracker changeTracker;
+        protected EntityManager manager;
 
         /// <summary>
         /// attribute dictionary
@@ -161,7 +180,11 @@ namespace oradmin
         #endregion
 
         #region Constructor
-
+        protected EntityObject()
+        {
+            // assign an entity key
+            this.entityKey = new EntityKey(this);
+        }
         #endregion
 
         #region IEditableObject Members
@@ -187,7 +210,6 @@ namespace oradmin
         public event PropertyChangedEventHandler PropertyChanged;
         #endregion
 
-
         #region Helper methods
         private void OnPropertyChanging(string property)
         {
@@ -207,80 +229,111 @@ namespace oradmin
                 handler(this, new PropertyChangedEventArgs(property));
             }
         }
+        private void OnPropertyChangedPassingValue(string propertyName, object value)
+        {
+            PropertyChangedPassingValueHandler handler = this.PropertyChangedPassingValue;
+
+            if (handler != null)
+            {
+                handler(this, new PropertyChangedPassingValueEventArgs(propertyName, value));
+            }
+        }
         #endregion
 
         #region IDataErrorInfo Members
         public string Error
         {
-            get { return validator.Error; }
+            get { return (validator as IDataErrorInfo).Error; }
         }
         public string this[string columnName]
         {
-            get { return validator[columnName]; }
+            get { return (validator as IDataErrorInfo)[columnName]; }
         }
         #endregion
-    }
 
-    public class EntityObjectChangeTracker : IEntityChangeTracker, IEditableObject,
-        IRevertibleChangeTracking
-    {
+        #region Properties
+        public bool IsEditing { get; private set; }
+        #endregion
 
-        #region IEntityChangeTracker Members
+        #region INotifyPropertyChangedPassingValue Members
+        public event PropertyChangedPassingValueHandler PropertyChangedPassingValue;
+        #endregion
 
+        #region IEntityDataContainer Members
+        public IEquatableObject DataKey { get; private set; }
+        #endregion
+
+        #region Porperties
+        public EntityKey EntityKey
+        {
+            get { return this.entityKey; }
+            private set
+            {
+                this.entityKey = value;
+            }
+        }
         public EEntityState EntityState
         {
+            get
+            {
+                if (this.changeTracker == null)
+                    return EEntityState.Detached;
+
+                return this.changeTracker.EntityState;
+            }
+        }
+        public EntityManager EntityManager
+        {
+            get
+            {
+                return this.manager;
+            }
+            set
+            {
+                EntityManager manager = value as EntityManager;
+
+                if (manager != null &&
+                    manager.BelongsTo(this))
+                {
+                    this.manager = manager;
+                }
+            }
+        }
+        #endregion
+
+        #region Public methods
+        public abstract void Merge(IEntityDataContainer data);
+        #endregion
+
+        #region IEntityWithErrorReporting Members
+
+        public bool HasErrors
+        {
             get { throw new NotImplementedException(); }
         }
 
-        public void EntityMemberChanging(string member)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void EntityMemberChanged(string member, object value)
-        {
-            throw new NotImplementedException();
-        }
-
         #endregion
-        #region IEditableObject Members
 
-        public void BeginEdit()
+        #region IEntityWithChangeTracker Members
+        public IEntityChangeTracker Tracker
         {
-            throw new NotImplementedException();
-        }
-
-        public void CancelEdit()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void EndEdit()
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-        #region IRevertibleChangeTracking Members
-        public void RejectChanges()
-        {
-            throw new NotImplementedException();
-        }
-        #endregion
-        #region IChangeTracking Members
-        public void AcceptChanges()
-        {
-            throw new NotImplementedException();
-        }
-        public bool IsChanged
-        {
-            get { throw new NotImplementedException(); }
+            get
+            {
+                return this.changeTracker;
+            }
+            set
+            {
+                if (value != null)
+                {
+                    this.changeTracker = value;
+                }
+            }
         }
         #endregion
     }
 
     public interface IEntityDataContainer
     {
-        IEquatableObject Key { get; }
+        IEquatableObject DataKey { get; }
     }
 }

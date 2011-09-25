@@ -19,10 +19,11 @@ namespace oradmin
     public interface IEntityValidator
     {
         void ValidateEntity();
-        void ValidateProperty(string property);
+        void ValidateProperty(string property, object value);
     }
 
-    public abstract class EntityValidator<TEntity> : IEntityValidator, IDataErrorInfo
+    public abstract class EntityValidator<TEntity> : IEntityValidator, IDataErrorInfo,
+        IEntityWithErrorReporting
         where TEntity : EntityObject
     {
         #region Members
@@ -31,6 +32,8 @@ namespace oradmin
         /// </summary>
         protected TEntity entity;
         protected static Type validatorType;
+        protected ValidationContext validationContext;
+        IServiceProvider validationServiceProvider;
         /// <summary>
         /// Lists of entity-level validators
         /// </summary>
@@ -39,6 +42,14 @@ namespace oradmin
         /// Lists of property-level validators for the entity
         /// </summary>
         protected static PropertyValidatorsLists propertyValidators;
+        protected static List<string> propertyNames;
+
+        protected List<string> entityErrors =
+            new List<string>();
+        protected Dictionary<string, List<string>> propertyErrors =
+            new Dictionary<string, List<string>>();
+        protected Dictionary<string, object> propertyValues =
+            new Dictionary<string, object>();
         #endregion
 
         #region Static methods
@@ -48,18 +59,39 @@ namespace oradmin
             if (!SetValidatorType(type))
                 return;
 
-            // load validation attributes from an entity type
             LoadEntityValidators();
+            LoadPropertyValidators();
         }
         protected static void LoadEntityValidators()
         {
             Type entityType = typeof(TEntity);
 
-            entityValidators = 
+            entityValidators =
+                from validator in entityType.GetCustomAttributes(
+                    typeof(MyValidationAttribute), true) as IEnumerable<MyValidationAttribute>
+                where validator.TargetValidatorType.Equals(validatorType)
+                select validator;
         }
-        private static void LoadPropertyValidators()
+        protected static void LoadPropertyValidators()
         {
+            Type entityType = typeof(TEntity);
+            propertyValidators = new Dictionary<string, IEnumerable<MyValidationAttribute>>();
+            propertyNames = new List<string>();
 
+            foreach (PropertyInfo p in entityType.GetProperties())
+            {
+                IEnumerable<MyValidationAttribute> atts =
+                    from attribute in p.GetCustomAttributes(typeof(MyValidationAttribute), true)
+                    as IEnumerable<MyValidationAttribute>
+                    where attribute.TargetValidatorType.Equals(validatorType)
+                    select attribute;
+
+                if(atts.Count() > 0)
+                {
+                    propertyValidators.Add(p.Name, atts);
+                    propertyNames.Add(p.Name);
+                }
+            }
         }
         private static bool SetValidatorType(Type type)
         {
@@ -77,117 +109,144 @@ namespace oradmin
         #endregion
         
         #region Constructors
-        
-
-        public EntityValidator(EntityObject entity)
+        public EntityValidator(TEntity entity, IServiceProvider validationServiceProvider)
         {
-            if (entity == null)
-                throw new ArgumentNullException("Entity");
-
             this.entity = entity;
+            this.validationContext = new ValidationContext(entity, validationServiceProvider);
+
+            // initialize property dictionaries
+            initializePropertyDictionaries();
+            // set up event bindings
+            entity.PropertyChangedPassingValue += new PropertyChangedPassingValueHandler(entity_PropertyChangedPassingValue);
         }
         #endregion
         
         #region IDataErrorInfo Members
         public string Error
         {
-            get { throw new NotImplementedException(); }
+            get
+            {
+                return
+                    string.Join(Environment.NewLine,
+                                entityErrors.ToArray());
+            }
         }
         public string this[string columnName]
         {
-            get { throw new NotImplementedException(); }
+            get
+            {
+                return
+                    string.Join(Environment.NewLine,
+                                propertyErrors[columnName].ToArray());
+            }
         }
         #endregion
 
         #region IEntityValidator Members
         public void ValidateEntity()
         {
-            throw new NotImplementedException();
+            // validate properties
+            clearPropertyErrors();
+            foreach (KeyValuePair<string, object> pair in propertyValues)
+            {
+                ValidateProperty(pair.Key, pair.Value);
+            }
+
+            // if there are no errors, proceed to entity validation
+
+            if (HasErrors)
+                return;
+
+            // clear errors
+            clearEntityOnlyErrors();
+            validationContext.MemberName = string.Empty;
+
+            foreach (MyValidationAttribute validator in entityValidators)
+            {
+                ValidationResult result =
+                    validator.GetValidationResult(null, validationContext);
+
+                // error occured -> 
+                if (result != ValidationResult.Success)
+                {
+                    HasErrors = true;
+                    entityErrors.Add(result.ErrorMessage);
+                    addPropertyErrorsToProperties(result.ErrorMessage, result.MemberNames);
+                }
+            }
         }
-        public void ValidateProperty(string property)
+        public void ValidateProperty(string propertyName, object value)
         {
-            throw new NotImplementedException();
+            clearPropertyError(propertyName);
+            validationContext.MemberName = propertyName;
+
+            foreach (MyValidationAttribute validator in propertyValidators[propertyName])
+            {
+                ValidationResult result = validator.GetValidationResult(
+                    value, validationContext);
+
+                if (result != ValidationResult.Success)
+                {
+                    addPropertyErrorsToProperties(result.ErrorMessage, result.MemberNames);
+                    HasErrors = true;
+                }
+            }
         }
-        #endregion
-    }
-
-    public abstract class MyValidationAttribute : ValidationAttribute
-    {
-        #region Properties
-        public Type TargetValidatorType { get; private set; }
-        #endregion
-
-        #region Constructor
-        public MyValidationAttribute(string errorMessage, Type targetvalidatorType) :
-            base(errorMessage)
-        {
-            if (targetvalidatorType == null)
-                throw new ArgumentNullException("targetValidator");
-
-            this.TargetValidatorType = targetvalidatorType;
-        }
-        #endregion
-
-        #region Public validation methods
-        public abstract ValidationResult GetValidationResult(object value);
         #endregion
 
         #region Helper methods
-        private string FormatErrorMessage(params object[] errorParts)
+        private void clearErrors()
         {
-            return string.Format(ErrorMessage, errorParts);
+            clearEntityOnlyErrors();
+            clearPropertyErrors();
+        }
+        private void clearEntityOnlyErrors()
+        {
+            entityErrors.Clear();
+        }
+        private void clearPropertyErrors()
+        {
+            foreach (List<string> errors in propertyErrors.Values)
+            {
+                errors.Clear();
+            }
+        }
+        private void clearPropertyError(string propertyName)
+        {
+            propertyErrors[propertyName].Clear();
+        }
+        private void addPropertyErrorsToProperties(string errorMessage,
+            IEnumerable<string> propertyNames)
+        {
+            foreach (string propertyName in propertyNames)
+            {
+                propertyErrors[propertyName].Add(errorMessage);
+            }
+        }
+        void entity_PropertyChangedPassingValue(object sender, PropertyChangedPassingValueEventArgs e)
+        {
+            string propertyName = e.PropertyName;
+
+            if (propertyValues.ContainsKey(propertyName))
+            {
+                propertyValues[propertyName] = e.Value;
+            }
+        }
+        void initializePropertyDictionaries()
+        {
+            propertyValues = new Dictionary<string, object>();
+            propertyErrors = new Dictionary<string, List<string>>();
+
+            foreach (string propertyName in propertyNames)
+            {
+                propertyValues.Add(propertyName, null);
+                propertyErrors.Add(propertyName, new List<string>());
+            }
         }
         #endregion
-    }
 
-    public class ValidationResult
-    {
-        public static ValidationResult Success =
-            new ValidationResult(string.Empty, null);
-
-        #region Constructor
-        public ValidationResult(string errorMessage, IEnumerable<string> memberNames)
-        {
-            this.ErrorMessage = errorMessage;
-            this.MemberNames = memberNames;
-        }
-        #endregion
-
-        #region Properties
-        public string ErrorMessage { get; private set; }
-        public IEnumerable<string> MemberNames { get; private set; }
-        #endregion
-    }
-
-    public class ValidationContext : IServiceProvider
-    {
-        #region Members
-        public Type ObjectType { get; private set; }
-        public object ObjectInstance { get; private set; }
-        public string MemberName { get; set; }
-        #endregion
-
-        #region Constructor
-        public ValidationContext(object instance, string memberName,
-            IServiceProvider provider)
-        {
-            if (instance == null)
-                throw new ArgumentNullException("instance");
-
-            this.ObjectType = instance.GetType();
-            this.ObjectInstance = instance;
-            this.MemberName = memberName;
-        }
-        public ValidationContext(object instance, IServiceProvider provider) :
-            this(instance, string.Empty, provider)
-        { }
-        #endregion
-
-        #region IServiceProvider Members
-        public object GetService(Type serviceType)
-        {
-            throw new NotImplementedException();
-        }
+        #region IEntityWithErrorReporting Members
+        public bool HasErrors { get; private set; }
         #endregion
     }
 }

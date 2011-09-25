@@ -102,8 +102,11 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomEntityValidators.cs" />
+    <Compile Include="EntityChangeTracker.cs" />
     <Compile Include="EntityManager.cs" />
     <Compile Include="EntityStateManager.cs" />
+    <Compile Include="MyValidationAttribute.cs" />
     <Compile Include="Validator.cs" />
     <Compile Include="ColPrivManager.cs" />
     <Compile Include="ColumnManager.cs" />

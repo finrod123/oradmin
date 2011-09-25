@@ -7,12 +7,6 @@ using System.Text;
 
 namespace oradmin
 {
-    public enum EDataVersion
-    {
-        Commited,
-        Proposed
-    }
-
     public interface IConnection
     {
         string Name { get; set; }
@@ -22,6 +16,34 @@ namespace oradmin
         bool OsAuthenticate { get; set; }
         ENamingMethod NamingMethod { get; set; }
         string TnsName { get; set; }
+    }
+
+    public class ConnectionDataAdapter : EntityDataAdapter
+    {
+        public override bool GetChanges(EntityObject entity, out IEntityDataContainer data)
+        {
+            throw new NotImplementedException();
+        }
+        public override bool GetChanges(IEnumerable<EntityObject> entities, out IEnumerable<IEntityDataContainer> data)
+        {
+            throw new NotImplementedException();
+        }
+        public override bool GetChanges(out IEnumerable<IEntityDataContainer> data)
+        {
+            throw new NotImplementedException();
+        }
+        public override void Update(IEntityManager entityManager)
+        {
+            throw new NotImplementedException();
+        }
+        public override void Update(IEnumerable<EntityObject> entities)
+        {
+            throw new NotImplementedException();
+        }
+        public override void Update(EntityObject entity)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public interface IVersionedConnection

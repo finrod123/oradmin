@@ -24,32 +24,16 @@ namespace oradmin
         #region IEntityAdapter Members
         public void Fill(IEntityManager entityManager)
         {
-            throw new NotImplementedException();
+            // refresh all like with load and then force manager
+            // to merge new data in
+
         }
-        public bool GetChanges(EntityObject entity, out IEntityDataContainer data)
-        {
-            throw new NotImplementedException();
-        }
-        public bool GetChanges(IEnumerable<EntityObject> entities, out IEnumerable<IEntityDataContainer> data)
-        {
-            throw new NotImplementedException();
-        }
-        public bool GetChanges(out IEnumerable<IEntityDataContainer> data)
-        {
-            throw new NotImplementedException();
-        }
-        public void Update(IEntityManager entityManager)
-        {
-            throw new NotImplementedException();
-        }
-        public void Update(IEnumerable<EntityObject> entities)
-        {
-            throw new NotImplementedException();
-        }
-        public void Update(EntityObject entity)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract bool GetChanges(EntityObject entity, out IEntityDataContainer data);
+        public abstract bool GetChanges(IEnumerable<EntityObject> entities, out IEnumerable<IEntityDataContainer> data);
+        public abstract bool GetChanges(out IEnumerable<IEntityDataContainer> data);
+        public abstract void Update(IEntityManager entityManager);
+        public abstract void Update(IEnumerable<EntityObject> entities);
+        public abstract void Update(EntityObject entity);
         #endregion
     }
 
