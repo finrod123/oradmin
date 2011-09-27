@@ -5,42 +5,51 @@ using System.Text;
 
 namespace oradmin
 {
-    public interface IEntityDataAdapter
+    public interface IEntityDataAdapter<TEntity, TData, TKey>
+        where TEntity : EntityObject<TKey>
+        where TData   : IEntityDataContainer<TKey>
+        where TKey    : IEquatable<TKey>
     {
-        void Fill(IEntityManager entityManager);
+        void Fill(IEntityManager<TEntity, TData, TKey> entityManager);
 
-        bool GetChanges(EntityObject entity, out IEntityDataContainer data);
-        bool GetChanges(IEnumerable<EntityObject> entities,
-                        out IEnumerable<IEntityDataContainer> data);
-        bool GetChanges(out IEnumerable<IEntityDataContainer> data);
-
-        void Update(IEntityManager entityManager);
-        void Update(IEnumerable<EntityObject> entities);
-        void Update(EntityObject entity);
+        bool GetChanges(TEntity entity, out TData data);
+        bool GetChanges(IEnumerable<TEntity> entities,
+                        out IEnumerable<TData> data);
+        bool GetChanges(out IEnumerable<TData> data);
     }
 
-    public abstract class EntityDataAdapter : IEntityDataAdapter
+    public interface IEntityDataSaver<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TKey    : IEquatable<TKey>
     {
-        #region IEntityAdapter Members
-        public void Fill(IEntityManager entityManager)
+        void Update(IEntityManager<TKey> entityManager);
+        void Update(IEnumerable<TEntity> entities);
+        void Update(TEntity entity);
+    }
+
+    public abstract class EntityDataAdapter<TEntity, TData, TKey> :
+        IEntityDataAdapter<TEntity, TData, TKey>
+        where TEntity : EntityObject<TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        #region IEntityDataAdapter<TKey> Members
+        public virtual void Fill(IEntityManager<TEntity, TData, TKey> entityManager)
         {
-            // refresh all like with load and then force manager
-            // to merge new data in
+            IEnumerable<TData> loadedEntityContainers;
 
+            // if I can get the changes, merge them into the entityManager
+            if (GetChanges(out loadedEntityContainers))
+            {
+                entityManager.MergeData(loadedEntityContainers);
+            }
         }
-        public abstract bool GetChanges(EntityObject entity, out IEntityDataContainer data);
-        public abstract bool GetChanges(IEnumerable<EntityObject> entities, out IEnumerable<IEntityDataContainer> data);
-        public abstract bool GetChanges(out IEnumerable<IEntityDataContainer> data);
-        public abstract void Update(IEntityManager entityManager);
-        public abstract void Update(IEnumerable<EntityObject> entities);
-        public abstract void Update(EntityObject entity);
         #endregion
-    }
 
-    public interface IEquatableObject : IEquatable<IEquatableObject>
-    {
-        #region IEquatable<EquatableObject> Members
-        bool Equals(IEquatableObject other);
+        #region IEntityDataAdapter<TEntity,TData,TKey> Members
+        public abstract bool GetChanges(TEntity entity, out TData data);
+        public abstract bool GetChanges(IEnumerable<TEntity> entities, out IEnumerable<TData> data);
+        public abstract bool GetChanges(out IEnumerable<TData> data);
         #endregion
     }
 }

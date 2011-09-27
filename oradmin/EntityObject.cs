@@ -10,7 +10,7 @@ using System.Collections.Specialized;
 
 namespace oradmin
 {
-    using PropertyAttributesPair = KeyValuePair<string, IEnumerable<Attribute>>;
+    using PropertysPair = KeyValuePair<string, IEnumerable<Attribute>>;
     using PropertyAttributesLists = IEnumerable<KeyValuePair<string, IEnumerable<Attribute>>>;
     using EntityAttributesList = IEnumerable<Attribute>;
 
@@ -58,7 +58,7 @@ namespace oradmin
     public class EntityKey : IEquatable<EntityKey>
     {
         #region Constructor
-        public EntityKey(EntityObject entity)
+        public EntityKey(IEntityObjectBase entity)
         {
             if (entity == null)
                 throw new ArgumentNullException("entity");
@@ -71,7 +71,7 @@ namespace oradmin
         #endregion
 
         #region Properties
-        public EntityObject Entity { get; private set; }
+        public IEntityObjectBase Entity { get; private set; }
         #endregion
 
         #region IEquatable<EntityKey> Members
@@ -103,17 +103,34 @@ namespace oradmin
         Detached
     }
 
-    public abstract class EntityObject : IEditableObject, IRevertibleChangeTracking,
-        INotifyPropertyChanging, INotifyPropertyChanged, IDataErrorInfo, IEntityWithChangeTracker,
-        IUpdatableEntityObject, IRefreshableEntityObject, IEntityWithErrorReporting,
-        INotifyPropertyChangedPassingValue, IEntityDataContainer
+    /// <summary>
+    /// Serves EntityKey class
+    /// </summary>
+    public interface IEntityObjectBase
+    {
+        EntityKey EntityKey { get; }
+        IEntityManager Manager { get; }
+    }
+
+    public interface IEntityObject<TKey> : IEntityObjectBase, IEditableObject, IRevertibleChangeTracking,
+        INotifyPropertyChanging, INotifyPropertyChanged, INotifyPropertyChangedPassingValue,
+        IDataErrorInfo, IEntityWithChangeTracker, IEntityWithErrorReporting,
+        IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        EEntityState EntityState { get; }
+    }
+
+    public abstract class EntityObject<TKey> : IEntityObject<TKey>
+            //where TData : IEntityDataContainer<TKey>
+            where TKey  : IEquatable<TKey>
     {
         #region Members
         protected EntityKey entityKey;
         protected EEntityState entityState;
         protected IEntityValidator validator;
         protected IEntityChangeTracker changeTracker;
-        protected EntityManager manager;
+        protected IEntityManager manager;
 
         /// <summary>
         /// attribute dictionary
@@ -180,11 +197,21 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        protected EntityObject()
+        protected EntityObject(IEntityManager manager)
         {
+            if (manager == null)
+                throw new ArgumentNullException("manager");
+
+            this.manager = manager;
             // assign an entity key
             this.entityKey = new EntityKey(this);
+            // assign a validator
+            createValidator();
         }
+        #endregion
+
+        #region Helper methods
+        protected abstract void createValidator();
         #endregion
 
         #region IEditableObject Members
@@ -199,7 +226,7 @@ namespace oradmin
 
         #region IChangeTracking Members
         public abstract void AcceptChanges();
-        public abstract bool IsChanged;
+        public abstract bool IsChanged { get; }
         #endregion
 
         #region INotifyPropertyChanging Members
@@ -211,7 +238,7 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        private void OnPropertyChanging(string property)
+        protected void OnPropertyChanging(string property)
         {
             PropertyChangingEventHandler handler = this.PropertyChanging;
 
@@ -220,7 +247,7 @@ namespace oradmin
                 handler(this, new PropertyChangingEventArgs(property));
             }
         }
-        private void OnPropertyChanged(string property)
+        protected void OnPropertyChanged(string property)
         {
             PropertyChangedEventHandler handler = this.PropertyChanged;
 
@@ -229,7 +256,7 @@ namespace oradmin
                 handler(this, new PropertyChangedEventArgs(property));
             }
         }
-        private void OnPropertyChangedPassingValue(string propertyName, object value)
+        protected void OnPropertyChangedPassingValue(string propertyName, object value)
         {
             PropertyChangedPassingValueHandler handler = this.PropertyChangedPassingValue;
 
@@ -238,6 +265,17 @@ namespace oradmin
                 handler(this, new PropertyChangedPassingValueEventArgs(propertyName, value));
             }
         }
+        protected void reportMemberChanging(string member)
+        {
+            this.changeTracker.EntityMemberChanging(member);
+            OnPropertyChanging(member);
+        }
+        protected void reportMemberChanged<TMember>(string member, TMember value)
+        {
+            this.changeTracker.EntityMemberChanged(member, value);
+            OnPropertyChanged(member);
+        }
+
         #endregion
 
         #region IDataErrorInfo Members
@@ -260,7 +298,7 @@ namespace oradmin
         #endregion
 
         #region IEntityDataContainer Members
-        public IEquatableObject DataKey { get; private set; }
+        public abstract TKey DataKey { get; private set; }
         #endregion
 
         #region Porperties
@@ -302,15 +340,13 @@ namespace oradmin
         #endregion
 
         #region Public methods
-        public abstract void Merge(IEntityDataContainer data);
+        public abstract void Merge(IEntityDataContainer<TKey> data,
+            EMergeOptions mergeOptions);
         #endregion
 
         #region IEntityWithErrorReporting Members
 
-        public bool HasErrors
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public abstract bool HasErrors { get; }
 
         #endregion
 
@@ -330,10 +366,82 @@ namespace oradmin
             }
         }
         #endregion
+
+        #region IEntityObject<TKey> Members
+
+
+        public IEntityManager Manager
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        #endregion
     }
 
-    public interface IEntityDataContainer
+    public abstract class DataSourceEnabledEntityObject : EntityObject,
+        IRefreshableEntityObject, IUpdatableEntityObject
     {
-        IEquatableObject DataKey { get; }
+
+        public override void BeginEdit()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void CancelEdit()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EndEdit()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void RejectChanges()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void AcceptChanges()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Merge(IEntityDataContainer data)
+        {
+            throw new NotImplementedException();
+        }
+
+        #region IRefreshableEntityObject Members
+
+        public void Refresh()
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region IUpdatableEntityObject Members
+
+        public void SaveChanges()
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        public abstract bool HasErrors { get; }
+    }
+
+    public interface IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        TKey DataKey { get; }
+    }
+
+    public enum EMergeOptions
+    {
+        KeepCurrentValues,
+        OverrideCurrentValues
     }
 }

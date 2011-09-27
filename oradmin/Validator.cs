@@ -22,15 +22,13 @@ namespace oradmin
         void ValidateProperty(string property, object value);
     }
 
-    public abstract class EntityValidator<TEntity> : IEntityValidator, IDataErrorInfo,
+    public abstract class EntityValidator : IEntityValidator, IDataErrorInfo,
         IEntityWithErrorReporting
-        where TEntity : EntityObject
     {
         #region Members
         /// <summary>
         /// Associated entity
         /// </summary>
-        protected TEntity entity;
         protected static Type validatorType;
         protected ValidationContext validationContext;
         IServiceProvider validationServiceProvider;
@@ -53,28 +51,25 @@ namespace oradmin
         #endregion
 
         #region Static methods
-        protected void Initialize(Type type)
+        protected static void Initialize(Type validatorType, Type entityType)
         {
             // try to set the validator type
-            if (!SetValidatorType(type))
+            if (!SetValidatorType(validatorType))
                 return;
 
-            LoadEntityValidators();
-            LoadPropertyValidators();
+            LoadEntityValidators(entityType);
+            LoadPropertyValidators(entityType);
         }
-        protected static void LoadEntityValidators()
+        protected static void LoadEntityValidators(Type entityType)
         {
-            Type entityType = typeof(TEntity);
-
             entityValidators =
                 from validator in entityType.GetCustomAttributes(
                     typeof(MyValidationAttribute), true) as IEnumerable<MyValidationAttribute>
                 where validator.TargetValidatorType.Equals(validatorType)
                 select validator;
         }
-        protected static void LoadPropertyValidators()
+        protected static void LoadPropertyValidators(Type entityType)
         {
-            Type entityType = typeof(TEntity);
             propertyValidators = new Dictionary<string, IEnumerable<MyValidationAttribute>>();
             propertyNames = new List<string>();
 
@@ -109,9 +104,8 @@ namespace oradmin
         #endregion
         
         #region Constructors
-        public EntityValidator(TEntity entity, IServiceProvider validationServiceProvider)
+        public EntityValidator(IEntityObject entity, IServiceProvider validationServiceProvider)
         {
-            this.entity = entity;
             this.validationContext = new ValidationContext(entity, validationServiceProvider);
 
             // initialize property dictionaries

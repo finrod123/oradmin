@@ -6,10 +6,12 @@ using System.Text;
 
 namespace oradmin
 {
-    public interface IEntityStateManager
+    public interface IEntityStateManager<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TKey    : IEquatable<TKey>
     {
-        void AddTracker(EntityObject entity);
-        void RemoveTracker(EntityObject entity);
+        void AddTracker(TEntity entity);
+        void RemoveTracker(TEntity entity);
 
         IEnumerable<IEntityChangeTracker> GetEntityEntries(EEntityState state);
         IEnumerable<IEntityChangeTracker> GetChanged();
@@ -17,11 +19,13 @@ namespace oradmin
         IEnumerable<IEntityChangeTracker> GetDeleted();
     }
 
-    public abstract class EntityStateManager: IEntityStateManager
+    public class EntityStateManager<TEntity, TKey>: IEntityStateManager<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TKey    : IEquatable<TKey>
     {
         #region Members
-        protected Dictionary<EntityKey, IEntityChangeTracker> trackerByEntityKey
-            = new Dictionary<EntityKey,IEntityChangeTracker>();
+        protected Dictionary<EntityKey, EntityChangeTracker<TEntity>> trackerByEntityKey
+            = new Dictionary<EntityKey,EntityChangeTracker<TEntity>>();
         #endregion
 
         #region IEntityStateManager Members
@@ -30,7 +34,7 @@ namespace oradmin
             return
                 from tracker in this.trackerByEntityKey.Values
                 where tracker.EntityState == state
-                select tracker;
+                select tracker as IEntityChangeTracker;
         }
         public IEnumerable<IEntityChangeTracker> GetChanged()
         {
@@ -47,12 +51,12 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        public abstract IEntityChangeTracker CreateTracker(EntityObject entity,
+        protected abstract IEntityChangeTracker CreateTracker(TEntity entity,
             EEntityState state);
         #endregion
         
         #region IEntityStateManager Members
-        public void AddTracker(EntityObject entity, EEntityState state)
+        public void AddTracker(TEntity entity, EEntityState state)
         {
             if (!this.trackerByEntityKey.ContainsKey(entity.EntityKey))
             {
@@ -61,9 +65,9 @@ namespace oradmin
                 entity.Tracker = tracker;
             }
         }
-        public void RemoveTracker(EntityObject entity)
+        public void RemoveTracker(TEntity entity)
         {
-            IEntityChangeTracker tracker;
+            EntityChangeTracker<TEntity> tracker;
 
             if (this.trackerByEntityKey.TryGetValue(entity.EntityKey, out tracker))
             {

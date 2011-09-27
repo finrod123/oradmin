@@ -4,10 +4,15 @@ using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using System.Xml;
+using System.Xml.Serialization;
+using System.IO;
 
 namespace oradmin
 {
-    public interface IConnection
+    using ConnectionKey = String;
+
+    public interface IConnectionBase
     {
         string Name { get; set; }
         string Comment { get; set; }
@@ -15,550 +20,368 @@ namespace oradmin
         EDbaPrivileges DbaPrivileges { get; set; }
         bool OsAuthenticate { get; set; }
         ENamingMethod NamingMethod { get; set; }
-        string TnsName { get; set; }
     }
 
-    public class ConnectionDataAdapter : EntityDataAdapter
+    [XmlRoot("Connection")]
+    public class ConnectionData : IConnectionBase, IEntityDataContainer<string>
     {
-        public override bool GetChanges(EntityObject entity, out IEntityDataContainer data)
-        {
-            throw new NotImplementedException();
-        }
-        public override bool GetChanges(IEnumerable<EntityObject> entities, out IEnumerable<IEntityDataContainer> data)
-        {
-            throw new NotImplementedException();
-        }
-        public override bool GetChanges(out IEnumerable<IEntityDataContainer> data)
-        {
-            throw new NotImplementedException();
-        }
-        public override void Update(IEntityManager entityManager)
-        {
-            throw new NotImplementedException();
-        }
-        public override void Update(IEnumerable<EntityObject> entities)
-        {
-            throw new NotImplementedException();
-        }
-        public override void Update(EntityObject entity)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public interface IVersionedConnection
-    {
-        string Name(EDataVersion version);
-        string Comment(EDataVersion version);
-        string UserName(EDataVersion version);
-        EDbaPrivileges DbaPrivileges(EDataVersion version);
-        bool OsAuthenticate(EDataVersion version);
-        ENamingMethod NamingMethod(EDataVersion version);
-        string TnsName(EDataVersion version);
-    }
-
-    public struct ConnectionData : IConnection
-    {
-        #region Members
-        /// <summary>
-        /// Business logic related members
-        /// </summary>
-        private string name = string.Empty;
-        private string comment = string.Empty;
-        private string userName = string.Empty;
-        private EDbaPrivileges dbaPrivileges = EDbaPrivileges.Normal;
-        private bool osAuthenticate = false;
-        private ENamingMethod namingMethod = ENamingMethod.ConnectDescriptor;
-        private string tnsName;
+        #region IConnectionData Members
+        [XmlElement("Name")]
+        public string Name { get; set; }
+        [XmlElement("Comment")]
+        public string Comment { get; set; }
+        [XmlElement("UserName")]
+        public string UserName { get; set; }
+        [XmlElement("DbaPrivileges")]
+        public EDbaPrivileges DbaPrivileges { get; set; }
+        [XmlElement("OsAuthenticate")]
+        public bool OsAuthenticate { get; set; }
+        [XmlElement("NamingMethod")]
+        public ENamingMethod NamingMethod { get; set; }
         #endregion
+        // naming methods specific data
+        [XmlElement("TnsName")]
+        public string TnsName { get; set; }
+        [XmlElement("ConnectDescriptor")]
+        public ConnectDescriptorData ConnectDescriptor { get; set; }
 
-        #region IConnection Members
-        public string Name
+        #region IEntityDataContainer<string> Members
+        string IEntityDataContainer<string>.DataKey
         {
-            get { return this.name; }
-            set
-            {
-                this.name = value;
-            }
-        }
-        public string Comment
-        {
-            get { return this.comment; }
-            set
-            {
-                this.comment = value;
-            }
-        }
-        public string UserName
-        {
-            get { return this.userName; }
-            set
-            {
-                this.userName = value;
-            }
-        }
-        public EDbaPrivileges DbaPrivileges
-        {
-            get { return this.dbaPrivileges; }
-            set
-            {
-                if (Enum.IsDefined(typeof(EDbaPrivileges), value))
-                {
-                    this.dbaPrivileges = value;
-                }
-            }
-        }
-        public bool OsAuthenticate
-        {
-            get { return this.osAuthenticate; }
-            set
-            {
-                this.osAuthenticate = value;
-            }
-        }
-        public ENamingMethod NamingMethod
-        {
-            get { return this.namingMethod; }
-            set
-            {
-                if (Enum.IsDefined(typeof(ENamingMethod), value))
-                {
-                    this.namingMethod = value;
-                }
-            }
-        }
-        public string TnsName
-        {
-            get { return this.tnsName; }
-            set
-            {
-                this.tnsName = value;
-            }
+            get { return this.Name; }
         }
         #endregion
     }
-    public class Connection : IConnection, IVersionedConnection, IConnectDescriptor,
-        INotifyPropertyChanged, IEditableObject,
-        IValidatableObject<EConnectionError>
-    {
-        #region Members
-        // manager reference
-        ConnectionManager manager;
-        // current and backup data
-        private readonly int id;
-        ConnectionData data, backupData;
-        ConnectDescriptor connectDescriptor;
-        // editable pattern data
-        bool isEditing = false;
-        bool hasChanged = false;
-        // sequence generator
-        public static SequenceGenerator IdGenerator = new SequenceGenerator(0, int.MaxValue, 1, false);
-        // validation data
-        bool hasErrors = false;
-        Dictionary<EConnectionError, ObjectError<EConnectionError>> errors =
-            new Dictionary<EConnectionError, ObjectError<EConnectionError>>();
-        #endregion
 
+    public class Connection : EntityObject<ConnectionKey>, IConnectionBase, IConnectDescriptorBase
+    {
         #region Constructor
-        public Connection(ConnectionManager manager)
+        // !!!TODO: konstrukce z datoveho kontejneru
+        public Connection(ConnectionData data, ConnectionManager manager):
+            this(manager)
         {
-            if (manager == null)
-                throw new ArgumentNullException("Connection manager");
+            // construct a connection from a data container
+        }
+        public Connection(ConnectionManager manager) :
+            base(manager)
+        {
 
-            this.id = IdGenerator.Next;
-            this.manager = manager;
-            connectDescriptor = new ConnectDescriptor();
-            // set up events
-            connectDescriptor.PropertyChanged += new PropertyChangedEventHandler(connectDescriptor_PropertyChanged);
-        }
-        #endregion
-
-        #region INotifyPropertyChanged Members
-        public event PropertyChangedEventHandler PropertyChanged;
-        #endregion
-
-        #region Properties
-        public int Id
-        {
-            get { return this.id; }
-        }
-        public ConnectionManager Manager
-        {
-            get { return this.manager; }
-        }
-        public bool Editing
-        {
-            get { return this.isEditing; }
-        }
-
-        #region IConnection Members
-        public string Name
-        {
-            get { return this.data.Name; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (!this.data.Name.Equals(value))
-                    {
-                        this.data.Name = value;
-                        OnPropertyChanged("Name");
-                    }
-                }
-            }
-        }
-        public string Comment
-        {
-            get { return this.data.Comment; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (!this.data.Comment.Equals(value))
-                    {
-                        this.data.Comment = value;
-                        OnPropertyChanged("Comment");
-                    }
-                }
-            }
-        }
-        public string UserName
-        {
-            get { return this.data.UserName; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (!this.data.Equals(value))
-                    {
-                        this.data.UserName = value;
-                        OnPropertyChanged("UserName");
-                    }
-                }
-            }
-        }
-        public EDbaPrivileges DbaPrivileges
-        {
-            get { return this.data.DbaPrivileges; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (!EqualityComparer<EDbaPrivileges>.Default.Equals(
-                        this.data.DbaPrivileges, value))
-                    {
-                        this.data.DbaPrivileges = value;
-                        OnPropertyChanged("DbaPrivileges");
-                    }
-                }
-            }
-        }
-        public bool OsAuthenticate
-        {
-            get { return this.data.OsAuthenticate; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (this.data.OsAuthenticate != value)
-                    {
-                        this.data.OsAuthenticate = value;
-                        OnPropertyChanged("OsAuthenticate");
-                    }
-                }
-            }
-        }
-        public ENamingMethod NamingMethod
-        {
-            get { return this.data.NamingMethod; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (!EqualityComparer<ENamingMethod>.Default.Equals(
-                        this.data.NamingMethod, value))
-                    {
-                        this.data.NamingMethod = value;
-                        OnPropertyChanged("NamingMethod");
-                    }
-                }
-            }
-        }
-        public string TnsName
-        {
-            get { return this.data.TnsName; }
-            set
-            {
-                if (this.isEditing)
-                {
-                    if (!this.data.TnsName.Equals(value))
-                    {
-                        this.data.TnsName = value;
-                        OnPropertyChanged("TnsName");
-                    }
-                }
-            }
-        }
-        #endregion
-
-        #region IConnectDescriptor Members
-        public string Host
-        {
-            get { return this.connectDescriptor.Host; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.Host = value;
-            }
-        }
-        public int Port
-        {
-            get { return this.connectDescriptor.Port; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.Port = value;
-            }
-        }
-        public bool UsingSid
-        {
-            get { return this.connectDescriptor.UsingSid; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.UsingSid = value;
-            }
-        }
-        public string ServiceName
-        {
-            get { return this.connectDescriptor.ServiceName; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.ServiceName = value;
-            }
-        }
-        public string InstanceName
-        {
-            get { return this.connectDescriptor.InstanceName; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.InstanceName = value;
-            }
-        }
-        public string Sid
-        {
-            get { return this.connectDescriptor.Sid; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.Sid = value;
-            }
-        }
-        public EServerType ServerType
-        {
-            get { return this.connectDescriptor.ServerType; }
-            set
-            {
-                if (this.isEditing)
-                    this.connectDescriptor.ServerType = value;
-            }
-        }
-        #endregion
-
-        #endregion
-
-        #region IEditableObject Members
-        public void BeginEdit()
-        {
-            if (this.isEditing)
-                return;
-
-            this.backupData = this.data;
-            this.connectDescriptor.BeginEdit();
-            this.isEditing = true;
-        }
-        public void CancelEdit()
-        {
-            if (!this.isEditing)
-                return;
-
-            this.isEditing = false;
-            this.data = this.backupData;
-            this.connectDescriptor.CancelEdit();
-        }
-        public void EndEdit()
-        {
-            if (!this.isEditing)
-                return;
-
-            // validuj spojeni i jeho casti (connect descriptor)
-            ReadOnlyCollection<ObjectError<EConnectionError>> errorsList;
-            if (!Validate(out errorsList))
-                return;
-
-            // spojeni je validni, zapis data
-            this.isEditing = false;
-            this.backupData = new ConnectionData();
-            this.connectDescriptor.EndEdit();
         }
         #endregion
 
         #region Helper methods
-        private void OnPropertyChanged(string propertyName)
+        protected override void createValidator()
         {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-        private void connectDescriptor_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            OnPropertyChanged(e.PropertyName);
-        }
-        void clearErrors()
-        {
-            hasErrors = false;
-            errors.Clear();
+            this.validator = new ConnectionValidator(this,
+                new ConnectionValidationServiceProvider(this.manager as ConnectionManager));
         }
         #endregion
 
-        #region IValidatableObject<EConnectionError> Members
-        public bool HasErrors
+        #region IConnectionData Members
+        public string Name
         {
-            get { return hasErrors; }
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
         }
-        public ReadOnlyCollection<ObjectError<EConnectionError>> Errors
+        public string Comment
         {
-            get { return errors.Values.ToList<ObjectError<EConnectionError>>().AsReadOnly(); }
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
         }
-        public bool Validate(out ReadOnlyCollection<ObjectError<EConnectionError>> errorsList)
+        public string UserName
         {
-            // while not editing, connection is always considered valid
-            if (!this.isEditing)
+            get
             {
-                errorsList = null;
-                return true;
+                throw new NotImplementedException();
             }
-
-            // clear errors
-            clearErrors();
-            // test properties for validity
-            if (string.IsNullOrEmpty(this.data.Name))
+            set
             {
-                hasErrors = true;
-                errors.Add(EConnectionError.EmptyName,
-                    new ObjectError<EConnectionError>(
-                    this,
-                    EConnectionError.EmptyName,
-                    "Empty name"));
+                throw new NotImplementedException();
             }
-
-            if (string.IsNullOrEmpty(this.data.UserName))
-            {
-                hasErrors = true;
-                errors.Add(
-                    EConnectionError.EmptyUserName,
-                    new ObjectError<EConnectionError>(
-                    this,
-                    EConnectionError.EmptyUserName,
-                    "Empty username"));
-            }
-
-            if (!Enum.IsDefined(typeof(EDbaPrivileges), this.data.DbaPrivileges))
-            {
-                hasErrors = true;
-                errors.Add(
-                    EConnectionError.InvalidPrivileges,
-                    new ObjectError<EConnectionError>(
-                    this,
-                    EConnectionError.InvalidPrivileges,
-                    "Invalid privileges"));
-            }
-
-            if (!Enum.IsDefined(typeof(ENamingMethod), this.data.NamingMethod))
-            {
-                hasErrors = true;
-                errors.Add(
-                    EConnectionError.InvalidNamingMethod,
-                    new ObjectError<EConnectionError>(
-                    this,
-                    EConnectionError.InvalidNamingMethod,
-                    "Invalid naming method"));
-            }
-
-            if (this.data.NamingMethod == ENamingMethod.ConnectDescriptor)
-            {
-                ReadOnlyCollection<ObjectError<EConnectDescriptorError>> connectDescriptorErrors;
-                if (!this.connectDescriptor.Validate(out connectDescriptorErrors))
-                {
-                    hasErrors = true;
-                    errors.Add(
-                        EConnectionError.InvalidConnectDescriptor,
-                        new ObjectError<EConnectionError>(
-                        connectDescriptor,
-                        EConnectionError.InvalidConnectDescriptor,
-                        "Invalid connect descriptor data, see details in encapsulated object"));
-                }
-            } else if (this.data.NamingMethod == ENamingMethod.TnsNaming &&
-               string.IsNullOrEmpty(TnsName))
-            {
-                hasErrors = true;
-                errors.Add(
-                    EConnectionError.EmptyTnsName,
-                    new ObjectError<EConnectionError>(
-                    this,
-                    EConnectionError.EmptyTnsName,
-                    "Empty TNS name"));
-            }
-
-            errorsList = errors.Values.ToList().AsReadOnly();
-            return hasErrors;
         }
-        public bool HasError(EConnectionError error)
+        public EDbaPrivileges DbaPrivileges
         {
-            return errors.ContainsKey(error);
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public bool OsAuthenticate
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public ENamingMethod NamingMethod
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
         }
         #endregion
 
-        #region IVersionedConnection Members
+        #region IConnectDescriptorBase Members
+        public string Host
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public EProtocolType Protocol
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public int Port
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public bool IsUsingSid
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public string ServiceName
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public string InstanceName
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public string Sid
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public EServerType ServerType
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+        #endregion
 
-        string IVersionedConnection.Name(EDataVersion version)
+        public override void BeginEdit()
         {
             throw new NotImplementedException();
         }
-
-        string IVersionedConnection.Comment(EDataVersion version)
+        public override void CancelEdit()
         {
             throw new NotImplementedException();
         }
-
-        string IVersionedConnection.UserName(EDataVersion version)
+        public override void EndEdit()
         {
             throw new NotImplementedException();
         }
-
-        EDbaPrivileges IVersionedConnection.DbaPrivileges(EDataVersion version)
+        public override void RejectChanges()
         {
             throw new NotImplementedException();
         }
-
-        bool IVersionedConnection.OsAuthenticate(EDataVersion version)
+        public override void AcceptChanges()
         {
             throw new NotImplementedException();
         }
-
-        ENamingMethod IVersionedConnection.NamingMethod(EDataVersion version)
+        public override bool IsChanged
+        {
+            get { throw new NotImplementedException(); }
+        }
+        public override bool HasErrors
+        {
+            get { throw new NotImplementedException(); }
+        }
+        /// <summary>
+        /// Merges connection data into connection object
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="mergeOptions"></param>
+        public override void Merge(IEntityDataContainer<string> data, EMergeOptions mergeOptions)
         {
             throw new NotImplementedException();
         }
+    }
 
-        string IVersionedConnection.TnsName(EDataVersion version)
+    public class ConnectionDataAdapter : EntityDataAdapter<Connection, ConnectionData, string>
+    {
+        #region Members
+        string connectionsFileName;
+        XmlSerializer serializer = new XmlSerializer(typeof(ConnectionData),
+                                                         new XmlRootAttribute("Connections"));
+        #endregion
+
+        #region Constructor
+        public ConnectionDataAdapter(string connectionsFileName)
+        {
+            if (!File.Exists(connectionsFileName))
+                throw new FileNotFoundException("Connections file not found", connectionsFileName);
+
+            this.connectionsFileName = connectionsFileName;
+        }
+        #endregion
+        
+        public override bool GetChanges(Connection entity, out ConnectionData data)
         {
             throw new NotImplementedException();
         }
+        public override bool GetChanges(IEnumerable<Connection> entities, out IEnumerable<ConnectionData> data)
+        {
+            throw new NotImplementedException();
+        }
+        public override bool GetChanges(out IEnumerable<ConnectionData> data)
+        {
+            // access a file and read all connections
+            XmlTextReader reader = new XmlTextReader(new FileStream(this.connectionsFileName, FileMode.Open));
 
+            if (!this.serializer.CanDeserialize(reader))
+            {
+                data = null;
+                return false;
+            }
+
+            data = this.serializer.Deserialize(reader) as IEnumerable<ConnectionData>;
+
+            if (data == null)
+                return false;
+
+            return true;
+        }
+    }
+
+    public class ConnectionManager : EntityManager<Connection, ConnectionData, string>
+    {
+        #region Constructor
+        public ConnectionManager(ConnectionDataAdapter dataAdapter):
+            base(dataAdapter)
+        {
+
+        }
+        #endregion
+
+        #region Helper methods
+        
+        #endregion
+
+        ///!!!TODO - pridelit klice a vhodny stav!
+        public override Connection CreateObject()
+        {
+            return new Connection(this);
+        }
+    }
+
+    public class ConnectionValidator : EntityValidator
+    {
+        static ConnectionValidator()
+        {
+            Initialize(typeof(ConnectionValidator), typeof(Connection));
+        }
+
+        public ConnectionValidator(Connection connection,
+            ConnectionValidationServiceProvider provider):
+            base(connection, provider)
+        {}
+    }
+
+    public class ConnectionValidationServiceProvider : IServiceProvider
+    {
+        #region Members
+        ConnectionManager manager;
+        #endregion
+
+        #region Constructor
+        public ConnectionValidationServiceProvider(ConnectionManager manager)
+        {
+            if (manager == null)
+                throw new ArgumentNullException("manager");
+
+            this.manager = manager;
+        } 
+        #endregion
+
+        #region IServiceProvider Members
+        public object GetService(Type serviceType)
+        {
+            if (serviceType == typeof(Connection))
+            {
+                return this.manager;
+            }
+
+            return new object();
+        }
         #endregion
     }
 }

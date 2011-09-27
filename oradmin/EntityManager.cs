@@ -7,149 +7,187 @@ using System.ComponentModel;
 namespace oradmin
 {
     // definice delegatu pro notifikace manageru
-    public delegate void EntitiesChangedHandler(IEnumerable<EntityObject> added);
+    public delegate void EntitiesChangedHandler<TEntity, TKey>(IEnumerable<TEntity> changed)
+        where TEntity : IEntityObject<TKey>
+        where TKey    : IEquatable<TKey>;
+
 
     public interface IEntityManager
     {
-        IEntityManager ParentManager { get; }
+        void Refresh();
+        void SaveChanges();
+    }
 
-        event EntitiesChangedHandler EntitiesAdded;
-        event EntitiesChangedHandler EntitiesModified;
-        event EntitiesChangedHandler EntitiesDeleted;
+    public interface IEntityManager<TEntity, TData, TKey>
+        where TEntity : IEntityObject<TKey>
+        where TData   : IEntityDataContainer<TKey>
+        where TKey    : IEquatable<TKey>
+    {
+        IEntityManager<TEntity, TData, TKey> ParentManager { get; }
+
+        event EntitiesChangedHandler<TEntity, TKey> EntitiesAdded;
+        event EntitiesChangedHandler<TEntity, TKey> EntitiesModified;
+        event EntitiesChangedHandler<TEntity, TKey> EntitiesDeleted;
 
         bool Loaded { get; }
         void Load();
 
-        void AddObject(EntityObject entity);
-        void DeleteObject(EntityObject entity);
+        void AddObject(TEntity entity);
+        void AttachObject(TEntity entity);
+        void DeleteObject(TEntity entity);
+        void DetachObject(TEntity entity);
         
-        EntityObject CreateObject();
+        TEntity CreateObject();
 
-        void MergeData(IEnumerable<IEntityDataContainer> data);
+        void MergeData(IEnumerable<TData> data);
 
-        Predicate<EntityObject> BelongsTo { get; }
+        bool BelongsTo(TData keyedData);
     }
 
-    public interface IRefreshableEntityManager
+    public interface IRefreshableEntityManager<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TKey    : IEquatable<TKey>
     {
         void Refresh();
-        void Refresh(IEnumerable<EntityObject> entities);
-        void Refresh(EntityObject entity);
+        void Refresh(IEnumerable<TEntity> entities);
     }
 
-    public interface IUpdatableEntityManager
+    public interface IUpdatableEntityManager<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TKey : IEquatable<TKey>
     {
         void SaveChanges();
-        void SaveChanges(IEnumerable<EntityObject> entities);
-        void SaveChanges(EntityObject entity);
+        void SaveChanges(IEnumerable<TEntity> entities);
     }
 
-    public interface IEntityManagerWithErrorReporting
+    public interface IEntityManagerWithErrorReporting<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TKey : IEquatable<TKey>
     {
         bool HasErrors { get; }
-        IEnumerable<EntityObject> EntitiesInError { get; }
+        IEnumerable<TEntity> EntitiesInError { get; }
     }
 
-    public abstract class EntityManager : IEntityManager,
-        IRefreshableEntityManager, IUpdatableEntityManager,
-        IRevertibleChangeTracking, IEntityManagerWithErrorReporting
+    public abstract class EntityManager<TEntity, TData, TKey> :
+        IEntityManager,
+        IEntityManager<TEntity, TData, TKey>,
+        IRefreshableEntityManager<TEntity, TKey>,
+        IUpdatableEntityManager<TEntity, TKey>,
+        IRevertibleChangeTracking, IEntityManagerWithErrorReporting<TEntity, TKey>
+        where TEntity : EntityObject<TKey>
+        where TData   : class, IEntityDataContainer<TKey>
+        where TKey    : IEquatable<TKey>
     {
         #region Members
+
         protected IEntityManager parentManager;
-        protected EntityStateManager entityStateManager;
-        protected Predicate<EntityObject> belongsToPredicate;
-        protected Dictionary<EntityKey, EntityObject> entityByEntityKey =
-            new Dictionary<EntityKey, EntityObject>();
-        protected Dictionary<IEquatableObject, EntityObject> entityByDataKey =
-            new Dictionary<IEquatableObject, EntityObject>();
-        protected EntityDataAdapter dataAdapter;
+        protected EntityStateManager<TEntity, TKey> entityStateManager;
+        protected Dictionary<EntityKey, TEntity> entityByEntityKey =
+            new Dictionary<EntityKey, TEntity>();
+        protected Dictionary<TKey, TEntity> entityByDataKey =
+            new Dictionary<TKey, TEntity>();
+        protected EntityDataAdapter<TEntity, TData, TKey> dataAdapter;
         #endregion
 
         #region Constructor
-        protected EntityManager(
-            IEntityManager parentManager,
-            Predicate<EntityObject> belongsToPredicate)
+        protected EntityManager(IEntityManager parentManager,
+            EntityDataAdapter<TEntity, TData, TKey> dataAdapter)
         {
-            if (belongsToPredicate == null)
-                this.belongsToPredicate = entity => true;
-            else
-                this.belongsToPredicate = belongsToPredicate;
+            if (parentManager == null)
+                throw new ArgumentNullException("parentManager");
+            if (dataAdapter == null)
+                throw new ArgumentNullException("dataAdapter");
 
-            ParentManager = parentManager;
-            // factory methods to create data adapter and state manager
-
-            // register for update notifications
-
+            this.parentManager = parentManager;
+            this.dataAdapter = dataAdapter;
+            this.entityStateManager = new EntityStateManager<TEntity, TKey>();
         }
         #endregion
 
         #region IEntityManager Members
         public bool Loaded { get; private set; }
-
         public void Load()
         {
             // fill with data adapter
+            this.dataAdapter.Fill(this);
         }
-
+        public void AttachObject(TEntity entity)
+        {
+            if (canBeAttached(entity))
+            {
+                attachEntityObject(entity, EEntityState.Unchanged);
+            }
+        }
         /// <summary>
         /// Adds an entity to a manager -> only if it is valid
         /// </summary>
         /// <param name="entity"></param>
-        public void AddObject(EntityObject entity)
+        public void AddObject(TEntity entity)
         {
-            // must belong to an entity manager context
-            if (!this.belongsToPredicate(entity))
-                return;
-
-            // if it is being edited, stop it
-            if (entity.IsEditing)
-                entity.EndEdit();
-
-            // test for entity errors
-            if (!entity.HasErrors &&
-                !entityByEntityKey.ContainsKey(entity.EntityKey) &&
-                !entityByDataKey.ContainsKey(entity.DataKey))
+            if(canBeAttached(entity))
             {
                 attachEntityObject(entity, EEntityState.Added);
             }
         }
-        public void DeleteObject(EntityObject entity)
+        public void DeleteObject(TEntity entity)
         {
             // mark object for deletion;
             // will be deleted when saveChanges() overload is called
             IEntityChangeTracker tracker = entity.Tracker;
             tracker.EntityState = EEntityState.Deleted;
         }
-        public abstract EntityObject CreateObject();
-        public void MergeData(IEnumerable<IEntityDataContainer> data)
+        public void DetachObject(TEntity entity)
         {
-            // let entitys object merge themselves with their data
+            throw new NotImplementedException();
+        }
+        public abstract bool BelongsTo(TData keyedData);
+
+        public abstract TEntity CreateObject();
+        public void MergeData(IEnumerable<TData> data)
+        {
+            // let entities object merge themselves with their data
 
         }
-
         #endregion
 
         #region Helper methods
-        private void attachEntityObject(EntityObject entity, EEntityState state)
+        private void attachEntityObject(TEntity entity, EEntityState state)
         {
             // add into dictionaries
             entityByEntityKey.Add(entity.EntityKey, entity);
             entityByDataKey.Add(entity.DataKey, entity);
             // begin tracking
             addEntityTracking(entity, state);
-            // set the entity manager for an entity object
-            entity.EntityManager = this;
         }
-        private void addEntityTracking(EntityObject entity, EEntityState state)
+        private void addEntityTracking(TEntity entity, EEntityState state)
         {
             this.entityStateManager.AddTracker(entity, state);
+        }
+        private bool canBeAttached(TEntity entity)
+        {
+            if (!BelongsTo(entity as TData))
+                return false;
+
+            // if it is being edited, stop it
+            if (entity.IsEditing)
+                entity.EndEdit();
+
+            // test for entity errors
+            if (entity.HasErrors ||
+                entityByEntityKey.ContainsKey(entity.EntityKey) ||
+                entityByDataKey.ContainsKey(entity.DataKey))
+            {
+                return false;
+            }
+
+            return true;
         }
         #endregion
 
         #region IRefreshableEntityManager Members
         public void Refresh()
         {
-            IEnumerable<IEntityDataContainer> refreshedEntityData;
+            IEnumerable<TData> refreshedEntityData;
             // call data adapter.GetChanges
             if (!dataAdapter.GetChanges(out refreshedEntityData))
                 return;
@@ -157,11 +195,11 @@ namespace oradmin
             // merge new data
 
         }
-        public void Refresh(IEnumerable<EntityObject> entities)
+        public void Refresh(IEnumerable<TEntity> entities)
         {
             // call data adapter.GetChanges and merge it
         }
-        public void Refresh(EntityObject entity)
+        public void Refresh(TEntity entity)
         {
             // call data adapter.GetChanges and merge it
         }
@@ -172,12 +210,11 @@ namespace oradmin
         {
             throw new NotImplementedException();
         }
-
-        public void SaveChanges(IEnumerable<EntityObject> entities)
+        public void SaveChanges(IEnumerable<TEntity> entities)
         {
             throw new NotImplementedException();
         }
-        public void SaveChanges(EntityObject entity)
+        public void SaveChanges(TEntity entity)
         {
             throw new NotImplementedException();
         }
@@ -203,14 +240,14 @@ namespace oradmin
 
         #region IEntityManagerWithErrorReporting Members
         public bool HasErrors { get; private set; }
-        public IEnumerable<EntityObject> EntitiesInError
+        public IEnumerable<TEntity> EntitiesInError
         {
             get { throw new NotImplementedException(); }
         }
         #endregion
 
         #region IEntityManager Members
-        public IEntityManager ParentManager
+        public IEntityManager<TEntity, TData, TKey> ParentManager
         {
             get { return this.parentManager; }
             private set
@@ -225,40 +262,36 @@ namespace oradmin
         #endregion
 
         #region IEntityManager Members
-        public Predicate<EntityObject> BelongsTo
-        {
-            get { return this.belongsToPredicate; }
-        }
         #endregion
 
         #region IEntityManager Members
-        public event EntitiesAddedHandler EntitiesAdded;
-        public event EntitiesModifiedHandler EntitiesModified;
-        public event EntitiesDeletedHandler EntitiesDeleted;
+        public event EntitiesChangedHandler<TEntity, TKey> EntitiesAdded;
+        public event EntitiesChangedHandler<TEntity, TKey> EntitiesModified;
+        public event EntitiesChangedHandler<TEntity, TKey> EntitiesDeleted;
         #endregion
 
         #region Helper methods
-        private void OnEntitiesAdded(IEnumerable<EntityObject> added)
+        private void OnEntitiesAdded(IEnumerable<TEntity> added)
         {
-            EntitiesChangedHandler handler = this.EntitiesAdded;
+            EntitiesChangedHandler<TEntity, TKey> handler = this.EntitiesAdded;
 
             if (handler != null)
             {
                 handler(added);
             }
         }
-        private void OnEntitiesModified(IEnumerable<EntityObject> modified)
+        private void OnEntitiesModified(IEnumerable<TEntity> modified)
         {
-            EntitiesChangedHandler handler = this.EntitiesModified;
+            EntitiesChangedHandler<TEntity, TKey> handler = this.EntitiesModified;
 
             if (handler != null)
             {
                 handler(modified);
             }
         }
-        private void OnEntitiesDeleted(IEnumerable<EntityObject> deleted)
+        private void OnEntitiesDeleted(IEnumerable<TEntity> deleted)
         {
-            EntitiesChangedHandler handler = this.EntitiesDeleted;
+            EntitiesChangedHandler<TEntity, TKey> handler = this.EntitiesDeleted;
 
             if (handler != null)
             {

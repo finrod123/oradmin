@@ -16,11 +16,11 @@ namespace oradmin
         void EntityMemberChanging(string member);
         void EntityMemberChanged<TData>(string member, TData value);
     }
-    public class EntityObjectChangeTracker : IEntityChangeTracker, IEditableObject,
+    public class EntityChangeTracker<TEntity> : IEntityChangeTracker, IEditableObject,
         IRevertibleChangeTracking
     {
         #region Members
-        protected EntityObject entity;
+        protected TEntity entity;
         protected EEntityState entityState;
         protected Dictionary<string, VersionedFieldBase> versionedProperties;
         #endregion
@@ -45,7 +45,7 @@ namespace oradmin
         #endregion
 
         #region Constuctor
-        public EntityObjectChangeTracker(TEntity entity)
+        public EntityChangeTracker(TEntity entity)
         {
             this.entity = entity;
             // initialize versioned properties
@@ -54,18 +54,18 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        private bool tryGetVersionedField<TData>(string fieldName, out VersionedField<TData> field)
+        private bool tryGetVersionedField<TData>(string fieldName, out VersionedFieldTemplatedBase<TData> field)
             where TData : class
         {
             VersionedFieldBase fieldBase;
 
             if (!versionedProperties.TryGetValue(fieldName, out fieldBase))
             {
-                field = default(VersionedField<TData>);
+                field = default(VersionedFieldTemplatedBase<TData>);
                 return false;
             }
 
-            field = fieldBase as VersionedField<TData>;
+            field = fieldBase as VersionedFieldTemplatedBase<TData>;
 
             if (field == null)
             {
@@ -93,7 +93,7 @@ namespace oradmin
         public TData GetFieldValue<TData>(string fieldName, EDataVersion version)
             where TData : class
         {
-            VersionedField<TData> field;
+            VersionedFieldTemplatedBase<TData> field;
 
             if (!tryGetVersionedField<TData>(fieldName, out field))
                 return default(TData);
@@ -103,7 +103,7 @@ namespace oradmin
         public TData GetDefaultFieldValue<TData>(string fieldName)
             where TData : class
         {
-            VersionedField<TData> field;
+            VersionedFieldTemplatedBase<TData> field;
 
             if (!tryGetVersionedField(fieldName, out field))
                 return default(TData);
@@ -185,6 +185,20 @@ namespace oradmin
         {
             get { throw new NotImplementedException(); }
         }
+        #endregion
+    }
+
+    public class TrackedAttribute : Attribute
+    {
+        #region Constructor
+        public TrackedAttribute(bool track)
+        {
+            Track = track;
+        }
+        #endregion
+
+        #region Properties
+        public bool Track { get; set; }
         #endregion
     }
 }
