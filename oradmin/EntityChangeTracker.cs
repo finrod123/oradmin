@@ -10,14 +10,28 @@ using System.Collections.Specialized;
 
 namespace oradmin
 {
-    public interface IEntityChangeTracker
+    public interface IDeletableObject
     {
-        EEntityState EntityState { get; set; }
+        void Delete();
+    }
+
+    public interface IEntityChangeTracker: IDisposable
+    {
+        EEntityState EntityState { get; }
         void EntityMemberChanging(string member);
         void EntityMemberChanged<TData>(string member, TData value);
     }
-    public class EntityChangeTracker<TEntity> : IEntityChangeTracker, IEditableObject,
+
+    public interface IDeletableEntityChangeTracker : IEntityChangeTracker, IDeletableObject
+    { }
+
+    public class EntityChangeTracker<TEntity, TData, TKey> :
+        IDeletableEntityChangeTracker,
+        IEditableObject,
         IRevertibleChangeTracking
+        where TEntity : EntityObject<TData, TKey>
+        where TData   : IEntityDataContainer<TKey>
+        where TKey    : IEquatable<TKey>
     {
         #region Members
         protected TEntity entity;
@@ -29,18 +43,23 @@ namespace oradmin
         /// <summary>
         /// List of properties to track (loaded with "loadTrackingProperties")
         /// </summary>
-        List<string> propertyNames;
+        protected static List<string> propertyNames;
         /// <summary>
         /// Intended to run from static constructor of a subclass
         /// </summary>
-        protected void Initialize()
+        protected static void Initialize()
         {
             // get properties to track from TEntity type (marked with Trackable attribute)
             loadTrackingProperties();
         }
         private void loadTrackingProperties()
         {
+            Type entityType = typeof(TEntity);
 
+            propertyNames =
+                (from property in entityType.GetProperties()
+                 where Attribute.IsDefined(property, typeof(TrackedAttribute))
+                 select property.Name).ToList();
         }
         #endregion
 
@@ -50,30 +69,12 @@ namespace oradmin
             this.entity = entity;
             // initialize versioned properties
             initializeVersionedProperties();
+            // read data from the entity
+            readEntityData();
         }
         #endregion
 
         #region Helper methods
-        private bool tryGetVersionedField<TData>(string fieldName, out VersionedFieldTemplatedBase<TData> field)
-            where TData : class
-        {
-            VersionedFieldBase fieldBase;
-
-            if (!versionedProperties.TryGetValue(fieldName, out fieldBase))
-            {
-                field = default(VersionedFieldTemplatedBase<TData>);
-                return false;
-            }
-
-            field = fieldBase as VersionedFieldTemplatedBase<TData>;
-
-            if (field == null)
-            {
-                return false;
-            }
-
-            return true;
-        }
         /// <summary>
         /// Override in subclass to actually assign the instances of VersionedFields
         /// to propertyName keys in "versionedFields" dictionary
@@ -87,28 +88,59 @@ namespace oradmin
                 versionedProperties.Add(propertyName, null);
             }
         }
+        protected abstract void readEntityData();
+        private EDataVersion getDefaultVersion(EEntityState state, bool isEditing)
+        {
+            if (isEditing)
+                return EDataVersion.Original;
+
+            switch (state)
+            {
+                case EEntityState.Added:
+                    return EDataVersion.Current;
+                case EEntityState.Modified:
+                    return EDataVersion.Current;
+                case EEntityState.Unchanged:
+                    return EDataVersion.Original;
+                case EEntityState.Deleted:
+                    return EDataVersion.Original;
+                case EEntityState.Detached:
+                    return EDataVersion.Proposed;
+            }
+        }
+        private bool tryGetField(string fieldName, out VersionedFieldBase field)
+        {
+            if (!versionedProperties.TryGetValue(fieldName, out field))
+            {
+                throw new KeyNotFoundException("Field with this key does not exist");
+            }
+
+            return true;
+        }
+        private void updateOriginalValuesToCurrent()
+        {
+            foreach (VersionedFieldBase field in versionedProperties.Values)
+            {
+                
+            }
+        }
         #endregion
 
         #region Public interface
         public TData GetFieldValue<TData>(string fieldName, EDataVersion version)
             where TData : class
         {
-            VersionedFieldTemplatedBase<TData> field;
-
-            if (!tryGetVersionedField<TData>(fieldName, out field))
-                return default(TData);
-
-            return field.GetValue(version);
+            VersionedFieldBase field;
+            tryGetField(fieldName, out field);
+            
+            return (field as VersionedFieldTemplatedBase<TData>).GetValue(version);
         }
         public TData GetDefaultFieldValue<TData>(string fieldName)
             where TData : class
         {
-            VersionedFieldTemplatedBase<TData> field;
-
-            if (!tryGetVersionedField(fieldName, out field))
-                return default(TData);
-
-            return field.DefaultValue;
+            return GetFieldValue<TData>(fieldName,
+                                        getDefaultVersion(this.entityState,
+                                                          this.entity.IsEditing));
         }
         public TData GetOriginalFieldValue<TData>(string fieldName)
             where TData : class
@@ -125,6 +157,11 @@ namespace oradmin
         {
             return GetFieldValue<TData>(fieldName, EDataVersion.Proposed);
         }
+        public void Delete()
+        {
+            this.entityState = EEntityState.Deleted;
+            // a dalsi akce
+        }
         #endregion
 
         #region IEntityChangeTracker Members
@@ -134,56 +171,80 @@ namespace oradmin
             {
                 return this.entityState;
             }
-            set
+            private set
             {
                 this.entityState = value;
-                // do some actions with data?
-
             }
         }
-        public void EntityMemberChanging(string member)
+        public void EntityMemberChanging(string member) { }
+        public void EntityMemberChanged<TData>(string member, TData value)
         {
-            // cache a current value
-        }
+            if(this.entityState == EEntityState.Deleted)
+                throw new InvalidOperationException("Cannot edit deleted object!");
 
-        public void EntityMemberChanged(string member, object value)
-        {
-            // set new current value
-        }
+            VersionedFieldBase field;
+            tryGetField(member, out field);
 
+            (field as VersionedFieldTemplatedBase<TData>).
+                SetValue(value, getDefaultVersion(this.entityState, this.entity.IsEditing));
+                                                                                
+        }
         #endregion
         #region IEditableObject Members
-
         public void BeginEdit()
         {
             throw new NotImplementedException();
         }
-
         public void CancelEdit()
         {
             throw new NotImplementedException();
         }
-
         public void EndEdit()
         {
             throw new NotImplementedException();
         }
-
         #endregion
+
         #region IRevertibleChangeTracking Members
         public void RejectChanges()
         {
             throw new NotImplementedException();
         }
         #endregion
+
         #region IChangeTracking Members
         public void AcceptChanges()
         {
-            throw new NotImplementedException();
+            if (this.entity.IsEditing)
+                return;
+
+            switch (this.entityState)
+            {
+                case EEntityState.Deleted:
+                    throw new InvalidOperationException("Cannot accept changes on deleted object!");
+                case EEntityState.Added:
+                case EEntityState.Modified:
+                    ;
+            }
         }
+
         public bool IsChanged
         {
             get { throw new NotImplementedException(); }
+        }
+        #endregion
+
+        #region IDisposable Members
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
+
+        #region IEntityChangeTracker<TData,TKey> Members
+        public EntityObject<TData, TKey> Entity
+        {
+            get { return this.entity; }
         }
         #endregion
     }
@@ -191,10 +252,11 @@ namespace oradmin
     public class TrackedAttribute : Attribute
     {
         #region Constructor
-        public TrackedAttribute(bool track)
+        protected TrackedAttribute(bool track)
         {
             Track = track;
         }
+        public TrackedAttribute() : this(false) { }
         #endregion
 
         #region Properties

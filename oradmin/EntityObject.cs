@@ -50,15 +50,27 @@ namespace oradmin
         void SaveChanges();
     }
 
-    public interface IEntityWithChangeTracker
+    public interface IEntityChangeTrackerBase
     {
-        IEntityChangeTracker Tracker { get; set; }
+        bool HasTracker { get; }
     }
 
-    public class EntityKey : IEquatable<EntityKey>
+    public interface IEntityWithChangeTracker : IEntityChangeTrackerBase
+    {
+        void SetChangeTracker(IEntityChangeTracker tracker);
+    }
+
+    public interface IEntityWithDeletableChangeTracker : IEntityChangeTrackerBase
+    {
+        void SetChangeTracker(IDeletableEntityChangeTracker tracker);
+    }
+
+    public class EntityKey<TData, TKey> : IEquatable<EntityKey<TData, TKey>>
+        where TData : IEntityDataContainer<TKey>
+        where TKey  : IEquatable<TKey>
     {
         #region Constructor
-        public EntityKey(IEntityObjectBase entity)
+        public EntityKey(IEntityObjectBase<TData, TKey> entity)
         {
             if (entity == null)
                 throw new ArgumentNullException("entity");
@@ -106,41 +118,42 @@ namespace oradmin
     /// <summary>
     /// Serves EntityKey class
     /// </summary>
-    public interface IEntityObjectBase
+    public interface IEntityObjectBase<TData, TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey  : IEquatable<TKey>
     {
-        EntityKey EntityKey { get; }
-        IEntityManager Manager { get; }
+        EntityKey<TData, TKey> EntityKey { get; }
+        IEntityManager<TData, TKey> Manager { get; }
     }
 
-    public interface IEntityObject<TKey> : IEntityObjectBase, IEditableObject, IRevertibleChangeTracking,
+    public interface IEntityObject<TData, TKey> : IEntityObjectBase<TData, TKey>,
+        IEditableObject, IRevertibleChangeTracking,
         INotifyPropertyChanging, INotifyPropertyChanged, INotifyPropertyChangedPassingValue,
-        IDataErrorInfo, IEntityWithChangeTracker, IEntityWithErrorReporting,
+        IDataErrorInfo, IEntityWithDeletableChangeTracker, IEntityWithErrorReporting,
         IEntityDataContainer<TKey>
-        where TKey : IEquatable<TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey  : IEquatable<TKey>
     {
         EEntityState EntityState { get; }
     }
 
-    public abstract class EntityObject<TKey> : IEntityObject<TKey>
-            //where TData : IEntityDataContainer<TKey>
+    public abstract class EntityObject<TData, TKey> : IEntityObject<TData, TKey>
+            where TData : class, IEntityDataContainer<TKey>
             where TKey  : IEquatable<TKey>
     {
         #region Members
-        protected EntityKey entityKey;
+        protected EntityKey<TData, TKey> entityKey;
         protected EEntityState entityState;
         protected IEntityValidator validator;
-        protected IEntityChangeTracker changeTracker;
-        protected IEntityManager manager;
+        protected IDeletableEntityChangeTracker changeTracker;
+        protected IEntityManager<TData, TKey> manager;
+        #endregion
 
-        /// <summary>
-        /// attribute dictionary
-        /// </summary>
+        #region Static members
         protected static EntityAttributesList entityAttributes;
         protected static PropertyAttributesLists propertyAttributes;
         protected static Type entityType;
-        #endregion
 
-        #region Static interface
         public static EntityAttributesList GetEntityAttributes()
         {
             return entityAttributes.AsEnumerable();
@@ -197,14 +210,14 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        protected EntityObject(IEntityManager manager)
+        protected EntityObject(IEntityManager<TData, TKey> manager)
         {
             if (manager == null)
                 throw new ArgumentNullException("manager");
 
             this.manager = manager;
             // assign an entity key
-            this.entityKey = new EntityKey(this);
+            this.entityKey = new EntityKey<TData, TKey>(this);
             // assign a validator
             createValidator();
         }
@@ -301,136 +314,72 @@ namespace oradmin
         public abstract TKey DataKey { get; private set; }
         #endregion
 
-        #region Porperties
-        public EntityKey EntityKey
+        #region Public methods
+        public abstract void Merge(TData data,
+            EMergeOptions mergeOptions);
+        public void Delete()
         {
-            get { return this.entityKey; }
-            private set
+            if (HasTracker)
             {
-                this.entityKey = value;
+                this.changeTracker.
             }
         }
+        #endregion
+
+        #region IEntityWithErrorReporting Members
+        public abstract bool HasErrors { get; }
+        #endregion
+
+        #region IEntityObject<TKey> Members
+        public IEntityManager<TData, TKey> Manager
+        {
+            get { return this.manager; }
+        }
+        #endregion
+
+        #region IEntityWithChangeTracker Members
+        public void SetChangeTracker(IDeletableEntityChangeTracker tracker)
+        {
+            if (this.changeTracker != null)
+            {
+                this.changeTracker.Dispose();
+            }
+
+            if (tracker == null ||
+                    (tracker != null &&
+                     tracker.Entity == this)
+                )
+            {
+                this.changeTracker = tracker;
+            }
+        }
+        public bool HasTracker
+        {
+            get { return this.changeTracker != null; }
+        }
+        #endregion
+
+        #region IEntityObject<TData,TKey> Members
         public EEntityState EntityState
         {
             get
             {
-                if (this.changeTracker == null)
-                    return EEntityState.Detached;
-
-                return this.changeTracker.EntityState;
-            }
-        }
-        public EntityManager EntityManager
-        {
-            get
-            {
-                return this.manager;
-            }
-            set
-            {
-                EntityManager manager = value as EntityManager;
-
-                if (manager != null &&
-                    manager.BelongsTo(this))
+                if (this.changeTracker != null)
                 {
-                    this.manager = manager;
+                    return this.changeTracker.EntityState;
                 }
+
+                return EEntityState.Detached;
             }
         }
         #endregion
 
-        #region Public methods
-        public abstract void Merge(IEntityDataContainer<TKey> data,
-            EMergeOptions mergeOptions);
-        #endregion
-
-        #region IEntityWithErrorReporting Members
-
-        public abstract bool HasErrors { get; }
-
-        #endregion
-
-        #region IEntityWithChangeTracker Members
-        public IEntityChangeTracker Tracker
+        #region IEntityObjectBase<TData,TKey> Members
+        public EntityKey<TData, TKey> EntityKey
         {
-            get
-            {
-                return this.changeTracker;
-            }
-            set
-            {
-                if (value != null)
-                {
-                    this.changeTracker = value;
-                }
-            }
+            get { return this.entityKey; }
         }
         #endregion
-
-        #region IEntityObject<TKey> Members
-
-
-        public IEntityManager Manager
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        #endregion
-    }
-
-    public abstract class DataSourceEnabledEntityObject : EntityObject,
-        IRefreshableEntityObject, IUpdatableEntityObject
-    {
-
-        public override void BeginEdit()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void CancelEdit()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void EndEdit()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void RejectChanges()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void AcceptChanges()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Merge(IEntityDataContainer data)
-        {
-            throw new NotImplementedException();
-        }
-
-        #region IRefreshableEntityObject Members
-
-        public void Refresh()
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
-        #region IUpdatableEntityObject Members
-
-        public void SaveChanges()
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
-        public abstract bool HasErrors { get; }
     }
 
     public interface IEntityDataContainer<TKey>

@@ -12,6 +12,25 @@ namespace oradmin
 {
     using ConnectionKey = String;
 
+    public class UpdateException : Exception
+    {
+        #region Constructor
+        public UpdateException(string message, Exception innerException):
+            base(message, innerException)
+        {
+
+        }
+        #endregion
+    }
+    public class DataReadException : Exception
+    {
+        #region Constructor
+        public DataReadException(string message, Exception innerException) :
+            base(message, innerException)
+        { }
+        #endregion
+    }
+
     public interface IConnectionBase
     {
         string Name { get; set; }
@@ -53,7 +72,8 @@ namespace oradmin
         #endregion
     }
 
-    public class Connection : EntityObject<ConnectionKey>, IConnectionBase, IConnectDescriptorBase
+    public class Connection : EntityObject<ConnectionData, ConnectionKey>,
+        IConnectionBase, IConnectDescriptorBase
     {
         #region Constructor
         // !!!TODO: konstrukce z datoveho kontejneru
@@ -78,6 +98,7 @@ namespace oradmin
         #endregion
 
         #region IConnectionData Members
+        [Tracked]
         public string Name
         {
             get
@@ -89,6 +110,7 @@ namespace oradmin
                 throw new NotImplementedException();
             }
         }
+        [Tracked]
         public string Comment
         {
             get
@@ -100,6 +122,7 @@ namespace oradmin
                 throw new NotImplementedException();
             }
         }
+        [Tracked]
         public string UserName
         {
             get
@@ -111,6 +134,7 @@ namespace oradmin
                 throw new NotImplementedException();
             }
         }
+        [Tracked]
         public EDbaPrivileges DbaPrivileges
         {
             get
@@ -122,6 +146,7 @@ namespace oradmin
                 throw new NotImplementedException();
             }
         }
+        [Tracked]
         public bool OsAuthenticate
         {
             get
@@ -133,6 +158,7 @@ namespace oradmin
                 throw new NotImplementedException();
             }
         }
+        [Tracked]
         public ENamingMethod NamingMethod
         {
             get
@@ -146,6 +172,9 @@ namespace oradmin
         }
         #endregion
 
+        /// <summary>
+        /// Tracked by ConnectDescriptor change tracker
+        /// </summary>
         #region IConnectDescriptorBase Members
         public string Host
         {
@@ -236,44 +265,6 @@ namespace oradmin
             }
         }
         #endregion
-
-        public override void BeginEdit()
-        {
-            throw new NotImplementedException();
-        }
-        public override void CancelEdit()
-        {
-            throw new NotImplementedException();
-        }
-        public override void EndEdit()
-        {
-            throw new NotImplementedException();
-        }
-        public override void RejectChanges()
-        {
-            throw new NotImplementedException();
-        }
-        public override void AcceptChanges()
-        {
-            throw new NotImplementedException();
-        }
-        public override bool IsChanged
-        {
-            get { throw new NotImplementedException(); }
-        }
-        public override bool HasErrors
-        {
-            get { throw new NotImplementedException(); }
-        }
-        /// <summary>
-        /// Merges connection data into connection object
-        /// </summary>
-        /// <param name="data"></param>
-        /// <param name="mergeOptions"></param>
-        public override void Merge(IEntityDataContainer<string> data, EMergeOptions mergeOptions)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public class ConnectionDataAdapter : EntityDataAdapter<Connection, ConnectionData, string>
@@ -281,7 +272,7 @@ namespace oradmin
         #region Members
         string connectionsFileName;
         XmlSerializer serializer = new XmlSerializer(typeof(ConnectionData),
-                                                         new XmlRootAttribute("Connections"));
+                                                     new XmlRootAttribute("Connections"));
         #endregion
 
         #region Constructor
@@ -313,10 +304,20 @@ namespace oradmin
                 return false;
             }
 
-            data = this.serializer.Deserialize(reader) as IEnumerable<ConnectionData>;
-
-            if (data == null)
-                return false;
+            try
+            {
+                data = this.serializer.Deserialize(reader) as IEnumerable<ConnectionData>;
+                if (data == null)
+                    return false;
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new DataReadException("Cannot read connections from a file", e);
+            }
+            finally
+            {
+                reader.Close();
+            }
 
             return true;
         }
@@ -326,21 +327,90 @@ namespace oradmin
     {
         #region Constructor
         public ConnectionManager(ConnectionDataAdapter dataAdapter):
-            base(dataAdapter)
+            base(null, dataAdapter)
         {
-
+            
         }
         #endregion
+        // asi jedina implementovana refresh metoda pro connections
+        public override bool Refresh()
+        {
+            
+        }
 
-        #region Helper methods
-        
-        #endregion
-
-        ///!!!TODO - pridelit klice a vhodny stav!
+        // asi nebude implementovano
+        public override bool Refresh(IEnumerable<Connection> entities)
+        {
+            throw new NotImplementedException();
+        }
+        public override bool BelongsTo(ConnectionData keyedData)
+        {
+            return true;
+        }
         public override Connection CreateObject()
         {
             return new Connection(this);
         }
+    }
+
+    /// <summary>
+    /// Trida provadejici ukladani pripojeni
+    /// </summary>
+    public class ConnectionSaver : IEntityDataSaver<ConnectionManager, Connection, ConnectionData, string>
+    {
+
+        #region Members
+        string connectionsFileName;
+        XmlSerializer serializer = new XmlSerializer(typeof(ConnectionData),
+                                                     new XmlRootAttribute("Connections"));
+        #endregion
+
+        #region Constructor
+        public ConnectionSaver(string connectionsFileName)
+        {
+            if (!File.Exists(connectionsFileName))
+                throw new FileNotFoundException("Connections file not found!", connectionsFileName);
+
+            this.connectionsFileName = connectionsFileName;
+        }
+        #endregion
+
+        #region IEntityDataSaver<ConnectionManager,Connection,ConnectionData,string> Members
+
+        /// <summary>
+        /// Currently the only implemented saving method
+        /// </summary>
+        /// <param name="entityManager">Connection manager</param>
+        public void Update(ConnectionManager entityManager)
+        {
+            // open the connections file and truncate it
+            XmlTextWriter writer = new XmlTextWriter(
+                new FileStream(this.connectionsFileName, FileMode.Truncate), Encoding.Default);
+
+            try
+            {
+                // serialize connections
+                serializer.Serialize(writer,
+                    entityManager.View.SourceCollection as IEnumerable<Connection>);
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new UpdateException("Connections cannot be serialized!", e);
+            }
+            finally
+            {
+                writer.Close();
+            }
+        }
+        public void Update(IEnumerable<Connection> entities)
+        {
+            throw new NotImplementedException();
+        }
+        public void Update(Connection entity)
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
     }
 
     public class ConnectionValidator : EntityValidator
@@ -383,5 +453,13 @@ namespace oradmin
             return new object();
         }
         #endregion
+    }
+
+    public class ConnectionChangeTracker : EntityChangeTracker<Connection, ConnectionData, string>
+    {
+        static ConnectionChangeTracker()
+        {
+            Initialize();
+        }
     }
 }

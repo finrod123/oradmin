@@ -27,16 +27,47 @@ namespace oradmin
         TData DefaultValue { get; }
     }
 
-    public abstract class VersionedFieldBase : IVersionedFieldBase<EDataVersion>
+    public abstract class VersionedFieldBase : IVersionedFieldBase<EDataVersion>,
+        IEditableObject, IRevertibleChangeTracking
     {
+        #region Properties
+        public bool IsEditing { get; private set; }
+        #endregion
+        
         #region IVersionedFieldBase<EDataVersion> Members
         public abstract bool HasVersion(EDataVersion version);
+        #endregion
+
+        #region IEditableObject Members
+        public abstract void BeginEdit();
+        public abstract void CancelEdit();
+        public abstract void EndEdit();
+        #endregion
+
+        #region IRevertibleChangeTracking Members
+        public void RejectChanges()
+        {
+            if (!IsEditing)
+            {
+
+            }
+        }
+        #endregion
+
+        #region IChangeTracking Members
+        public void AcceptChanges()
+        {
+            throw new NotImplementedException();
+        }
+        public bool IsChanged
+        {
+            get { throw new NotImplementedException(); }
+        }
         #endregion
     }
 
     public abstract class VersionedFieldTemplatedBase<TData> :
-        VersionedFieldBase,
-        IRevertibleChangeTracking
+        VersionedFieldBase
     {
         public override bool HasVersion(EDataVersion version)
         {
@@ -200,6 +231,7 @@ namespace oradmin
             return tryReturn.Value;
         }
         public override void SetValue(TData data, EDataVersion version)
+
         {
             switch (version)
             {
@@ -217,6 +249,8 @@ namespace oradmin
                     break;
             }
         }
+
+
 
         public override void RejectChanges()
         {
