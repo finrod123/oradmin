@@ -22,55 +22,58 @@ namespace oradmin
         void EntityMemberChanged<TData>(string member, TData value);
     }
 
-    public interface IDeletableEntityChangeTracker : IEntityChangeTracker, IDeletableObject
-    { }
+    public interface IMergeableWithEntityDataContainer<TData, TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        void Merge(TData data);
+    }
 
-    public class EntityChangeTracker<TEntity, TData, TKey> :
-        IDeletableEntityChangeTracker,
+    
+    /// <summary>
+    /// The class that provides a basic tracking functionality for entities,
+    /// it is able to merge itself with new data, perform *edit and *changes
+    /// operations, recording changes to appropriate data versions, handling
+    /// data versions with respect to the entity state and entity editing state.
+    /// The class is intended to be subclassed with complete template specialization
+    /// for the use with various entity types. 
+    /// </summary>
+    /// <typeparam name="TEntity">The type of entity</typeparam>
+    /// <typeparam name="TData">The type of entity data container</typeparam>
+    /// <typeparam name="TKey">The type of entity data key</typeparam>
+    public abstract class EntityChangeTracker<TEntity, TData, TKey> :
+        IEntityChangeTracker,
+        IDeletableObject,
+        IMergeableWithEntityDataContainer<TData, TKey>,
         IEditableObject,
         IRevertibleChangeTracking
-        where TEntity : EntityObject<TData, TKey>
+        where TEntity : IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
         #region Members
+        /// <summary>
+        /// The entity instance to record changes for.
+        /// </summary>
         protected TEntity entity;
+        /// <summary>
+        /// The entity state to be used from the entity.
+        /// </summary>
         protected EEntityState entityState;
-        protected Dictionary<string, VersionedFieldBase> versionedProperties;
-        #endregion
-
-        #region Static members
         /// <summary>
-        /// List of properties to track (loaded with "loadTrackingProperties")
+        /// The dictionary of versioned fields.
         /// </summary>
-        protected static List<string> propertyNames;
-        /// <summary>
-        /// Intended to run from static constructor of a subclass
-        /// </summary>
-        protected static void Initialize()
-        {
-            // get properties to track from TEntity type (marked with Trackable attribute)
-            loadTrackingProperties();
-        }
-        private void loadTrackingProperties()
-        {
-            Type entityType = typeof(TEntity);
-
-            propertyNames =
-                (from property in entityType.GetProperties()
-                 where Attribute.IsDefined(property, typeof(TrackedAttribute))
-                 select property.Name).ToList();
-        }
+        protected Dictionary<string, VersionedFieldBase> versionedFields;
         #endregion
 
         #region Constuctor
-        public EntityChangeTracker(TEntity entity)
+        protected EntityChangeTracker(TEntity entity)
         {
             this.entity = entity;
             // initialize versioned properties
-            initializeVersionedProperties();
+            this.createVersionedFields();
             // read data from the entity
-            readEntityData();
+            this.readEntityData();
         }
         #endregion
 
@@ -79,16 +82,9 @@ namespace oradmin
         /// Override in subclass to actually assign the instances of VersionedFields
         /// to propertyName keys in "versionedFields" dictionary
         /// </summary>
-        protected virtual void initializeVersionedProperties()
-        {
-            versionedProperties = new Dictionary<string, VersionedFieldBase>();
-
-            foreach (string propertyName in propertyNames)
-            {
-                versionedProperties.Add(propertyName, null);
-            }
-        }
+        protected abstract void createVersionedFields();
         protected abstract void readEntityData();
+        
         private EDataVersion getDefaultVersion(EEntityState state, bool isEditing)
         {
             if (isEditing)
@@ -110,19 +106,12 @@ namespace oradmin
         }
         private bool tryGetField(string fieldName, out VersionedFieldBase field)
         {
-            if (!versionedProperties.TryGetValue(fieldName, out field))
+            if (!versionedFields.TryGetValue(fieldName, out field))
             {
                 throw new KeyNotFoundException("Field with this key does not exist");
             }
 
             return true;
-        }
-        private void updateOriginalValuesToCurrent()
-        {
-            foreach (VersionedFieldBase field in versionedProperties.Values)
-            {
-                
-            }
         }
         #endregion
 
@@ -157,11 +146,6 @@ namespace oradmin
         {
             return GetFieldValue<TData>(fieldName, EDataVersion.Proposed);
         }
-        public void Delete()
-        {
-            this.entityState = EEntityState.Deleted;
-            // a dalsi akce
-        }
         #endregion
 
         #region IEntityChangeTracker Members
@@ -193,7 +177,12 @@ namespace oradmin
         #region IEditableObject Members
         public void BeginEdit()
         {
-            throw new NotImplementedException();
+            if (IsEditing)
+                return;
+
+            IsEditing = true;
+
+            
         }
         public void CancelEdit()
         {
@@ -215,7 +204,7 @@ namespace oradmin
         #region IChangeTracking Members
         public void AcceptChanges()
         {
-            if (this.entity.IsEditing)
+            if (IsEditing)
                 return;
 
             switch (this.entityState)
@@ -227,7 +216,6 @@ namespace oradmin
                     ;
             }
         }
-
         public bool IsChanged
         {
             get { throw new NotImplementedException(); }
@@ -241,26 +229,20 @@ namespace oradmin
         }
         #endregion
 
-        #region IEntityChangeTracker<TData,TKey> Members
-        public EntityObject<TData, TKey> Entity
-        {
-            get { return this.entity; }
-        }
-        #endregion
-    }
-
-    public class TrackedAttribute : Attribute
-    {
-        #region Constructor
-        protected TrackedAttribute(bool track)
-        {
-            Track = track;
-        }
-        public TrackedAttribute() : this(false) { }
-        #endregion
-
         #region Properties
-        public bool Track { get; set; }
+        public bool IsEditing { get; private set; }
+        #endregion
+
+        #region IDeletableObject Members
+        public void Delete()
+        {
+            // mark as deleted -> collapse data versions ???
+            throw new NotImplementedException();
+        }
+        #endregion
+
+        #region IMergeableWithEntityDataContainer<TData,TKey> Members
+        public abstract void Merge(TData data);
         #endregion
     }
 }

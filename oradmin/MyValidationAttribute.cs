@@ -58,25 +58,26 @@ namespace oradmin
     {
         #region Members
         public Type ObjectType { get; private set; }
-        public object ObjectInstance { get; private set; }
+        public object ObjectInstance { get; set; }
         public string MemberName { get; set; }
         public IServiceProvider ServiceProvider { get; private set; }
         #endregion
 
         #region Constructor
-        public ValidationContext(object instance, string memberName,
+        public ValidationContext(Type objectType, object instance, string memberName,
             IServiceProvider provider)
         {
-            if (instance == null)
-                throw new ArgumentNullException("instance");
+            if (objectType != null)
+                this.ObjectType = objectType;
+            else if (instance != null)
+                this.ObjectType = instance.GetType();
 
-            this.ObjectType = instance.GetType();
             this.ObjectInstance = instance;
             this.MemberName = memberName;
             this.ServiceProvider = provider;
         }
-        public ValidationContext(object instance, IServiceProvider provider) :
-            this(instance, string.Empty, provider)
+        public ValidationContext(Type objectType, object instance, IServiceProvider provider) :
+            this(objectType, instance, string.Empty, provider)
         { }
         #endregion
 

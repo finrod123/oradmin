@@ -11,69 +11,75 @@ namespace oradmin
     using PropertyValidatorsLists = Dictionary<string, IEnumerable<MyValidationAttribute>>;
     using PropertyValidatorsPair = KeyValuePair<string, IEnumerable<MyValidationAttribute>>;
     using EntityValidatorsList = IEnumerable<MyValidationAttribute>;
-
-    using PropertyAttributesPair = KeyValuePair<string, IEnumerable<Attribute>>;
-    using PropertyAttributesLists = IEnumerable<KeyValuePair<string, IEnumerable<Attribute>>>;
-    using EntityAttributesList = IEnumerable<Attribute>;
     
+
     public interface IEntityValidator
     {
         void ValidateEntity();
         void ValidateProperty(string property, object value);
     }
 
-    public abstract class EntityValidator : IEntityValidator, IDataErrorInfo,
+    public abstract class EntityValidator<TEntity, TData, TKey> : IEntityValidator, IDataErrorInfo,
         IEntityWithErrorReporting
+        where TEntity : IEntityObject<TData, TKey>
+        where TData   : IEntityDataContainer<TKey>
+        where TKey    : IEquatable<TKey>
     {
         #region Members
         /// <summary>
         /// Associated entity
         /// </summary>
-        protected static Type validatorType;
         protected ValidationContext validationContext;
-        IServiceProvider validationServiceProvider;
         /// <summary>
-        /// Lists of entity-level validators
+        /// List of entity error messages
         /// </summary>
-        protected static EntityValidatorsList entityValidators;
-        /// <summary>
-        /// Lists of property-level validators for the entity
-        /// </summary>
-        protected static PropertyValidatorsLists propertyValidators;
-        protected static List<string> propertyNames;
-
         protected List<string> entityErrors =
             new List<string>();
+        /// <summary>
+        /// Lists of property error messages
+        /// </summary>
         protected Dictionary<string, List<string>> propertyErrors =
             new Dictionary<string, List<string>>();
-        protected Dictionary<string, object> propertyValues =
-            new Dictionary<string, object>();
+        // List of cached current property values (in order to access then during entity validation)
+        protected Dictionary<string, object> propertyValues;
         #endregion
 
         #region Static methods
-        protected static void Initialize(Type validatorType, Type entityType)
+        protected static void Initialize(
+            Type validatorType,
+            out EntityValidatorsList entityValidators,
+            out PropertyValidatorsLists propertyValidators,
+            out List<string> propertyNames)
         {
             // try to set the validator type
-            if (!SetValidatorType(validatorType))
+            if (!validatorType.IsSubclassOf(typeof(EntityValidator<TEntity, TData, TKey>)))
+            {
+                entityValidators = null;
+                propertyValidators = null;
+                propertyNames = null;
                 return;
+            }
 
-            LoadEntityValidators(entityType);
-            LoadPropertyValidators(entityType);
+            LoadEntityValidators(validatorType, out entityValidators);
+            LoadPropertyValidators(validatorType, out propertyValidators, out propertyNames);
         }
-        protected static void LoadEntityValidators(Type entityType)
+        protected static void LoadEntityValidators(Type validatorType,
+            out EntityValidatorsList entityValidators)
         {
             entityValidators =
-                from validator in entityType.GetCustomAttributes(
+                from validator in typeof(TEntity).GetCustomAttributes(
                     typeof(MyValidationAttribute), true) as IEnumerable<MyValidationAttribute>
                 where validator.TargetValidatorType.Equals(validatorType)
                 select validator;
         }
-        protected static void LoadPropertyValidators(Type entityType)
+        protected static void LoadPropertyValidators(Type validatorType,
+            out PropertyValidatorsLists propertyValidators,
+            out List<string> propertyNames)
         {
             propertyValidators = new Dictionary<string, IEnumerable<MyValidationAttribute>>();
             propertyNames = new List<string>();
 
-            foreach (PropertyInfo p in entityType.GetProperties())
+            foreach (PropertyInfo p in typeof(TEntity).GetProperties())
             {
                 IEnumerable<MyValidationAttribute> atts =
                     from attribute in p.GetCustomAttributes(typeof(MyValidationAttribute), true)
@@ -88,28 +94,26 @@ namespace oradmin
                 }
             }
         }
-        private static bool SetValidatorType(Type type)
-        {
-            if(EntityValidator<TEntity>.validatorType != null ||
-               type == null ||
-               !type.IsSubclassOf(typeof(EntityValidator<TEntity>)))
-            {
-                return false;
-            }
-
-            EntityValidator<TEntity>.validatorType = type;
-
-            return true;
-        }
         #endregion
+
+        protected EntityValidatorsList entityValidators;
+        protected PropertyValidatorsLists propertyValidators;
         
         #region Constructors
-        public EntityValidator(IEntityObject entity, IServiceProvider validationServiceProvider)
+        protected EntityValidator(
+            TEntity entity,
+            List<string> propertyNames,
+            EntityValidatorsList entityValidators,
+            PropertyValidatorsLists propertyValidators,
+            ValidationContext validationContext)
         {
-            this.validationContext = new ValidationContext(entity, validationServiceProvider);
-
+            // set up references to custom static validators
+            this.entityValidators = entityValidators;
+            this.propertyValidators = propertyValidators;
+            this.validationContext = validationContext;
             // initialize property dictionaries
-            initializePropertyDictionaries();
+            this.initializePropertyErrors(propertyNames);
+            this.initializePropertyValues();
             // set up event bindings
             entity.PropertyChangedPassingValue += new PropertyChangedPassingValueHandler(entity_PropertyChangedPassingValue);
         }
@@ -226,17 +230,15 @@ namespace oradmin
                 propertyValues[propertyName] = e.Value;
             }
         }
-        void initializePropertyDictionaries()
+        
+        protected void initializePropertyErrors(List<string> propertyNames)
         {
-            propertyValues = new Dictionary<string, object>();
-            propertyErrors = new Dictionary<string, List<string>>();
-
             foreach (string propertyName in propertyNames)
             {
-                propertyValues.Add(propertyName, null);
                 propertyErrors.Add(propertyName, new List<string>());
             }
         }
+        protected abstract void initializePropertyValues();
         #endregion
 
         #region IEntityWithErrorReporting Members

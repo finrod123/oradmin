@@ -10,6 +10,8 @@ using System.IO;
 
 namespace oradmin
 {
+    using EntityValidators = IEnumerable<MyValidationAttribute>;
+    using PropertyValidators = Dictionary<string, IEnumerable<MyValidationAttribute>>;
     using ConnectionKey = String;
 
     public class UpdateException : Exception
@@ -42,7 +44,7 @@ namespace oradmin
     }
 
     [XmlRoot("Connection")]
-    public class ConnectionData : IConnectionBase, IEntityDataContainer<string>
+    public class ConnectionData : IConnectionBase, IEntityDataContainer<ConnectionKey>
     {
         #region IConnectionData Members
         [XmlElement("Name")]
@@ -75,6 +77,16 @@ namespace oradmin
     public class Connection : EntityObject<ConnectionData, ConnectionKey>,
         IConnectionBase, IConnectDescriptorBase
     {
+        #region Constants
+        public static const string NAME_PROP_STRING = "Name";
+        public static const string COMMENT_PROP_STRING= "Comment";
+        public static const string USERNAME_PROP_STRING = "UserName";
+        public static const string DBAPRIVILEGES_PROP_STRING = "DbaPrivileges";
+        public static const string OSAUTHENTICATE_PROP_STRING = "OsAuthenticate";
+        public static const string NAMINGMETHOD_PROP_STRING = "NamingMethod";
+        public static const string TNSNAME_PROP_STRING = "TnsName";
+	    #endregion
+        
         #region Constructor
         // !!!TODO: konstrukce z datoveho kontejneru
         public Connection(ConnectionData data, ConnectionManager manager):
@@ -267,7 +279,7 @@ namespace oradmin
         #endregion
     }
 
-    public class ConnectionDataAdapter : EntityDataAdapter<Connection, ConnectionData, string>
+    public class ConnectionDataAdapter : EntityDataAdapter<Connection, ConnectionData, ConnectionKey>
     {
         #region Members
         string connectionsFileName;
@@ -323,7 +335,7 @@ namespace oradmin
         }
     }
 
-    public class ConnectionManager : EntityManager<Connection, ConnectionData, string>
+    public class ConnectionManager : EntityManager<Connection, ConnectionData, ConnectionKey>
     {
         #region Constructor
         public ConnectionManager(ConnectionDataAdapter dataAdapter):
@@ -356,7 +368,8 @@ namespace oradmin
     /// <summary>
     /// Trida provadejici ukladani pripojeni
     /// </summary>
-    public class ConnectionSaver : IEntityDataSaver<ConnectionManager, Connection, ConnectionData, string>
+    public class ConnectionSaver :
+        IEntityDataSaver<ConnectionManager, Connection, ConnectionData, ConnectionKey>
     {
 
         #region Members
@@ -413,17 +426,16 @@ namespace oradmin
         #endregion
     }
 
-    public class ConnectionValidator : EntityValidator
+    public class ConnectionValidator : EntityValidator<Connection, ConnectionData, ConnectionKey>
     {
-        static ConnectionValidator()
-        {
-            Initialize(typeof(ConnectionValidator), typeof(Connection));
-        }
-
-        public ConnectionValidator(Connection connection,
-            ConnectionValidationServiceProvider provider):
-            base(connection, provider)
-        {}
+        #region Static members
+        static EntityValidators entityValidators;
+        static PropertyValidators propertyValidators;
+        static ValidationContext validationContext =
+            new ValidationContext(typeof(Connection), null,
+                new ConnectionValidationServiceProvider());
+        #endregion
+        
     }
 
     public class ConnectionValidationServiceProvider : IServiceProvider
@@ -457,9 +469,19 @@ namespace oradmin
 
     public class ConnectionChangeTracker : EntityChangeTracker<Connection, ConnectionData, string>
     {
-        static ConnectionChangeTracker()
+        #region EntityChangeTracker<Connection, ConnectionData, string> members
+        protected override void createVersionedFields()
         {
-            Initialize();
+            this.versionedFields = new Dictionary<string, VersionedFieldBase>
+            {
+                { Connection.NAME_PROP_STRING, new VersionedFieldClonable<string>(this.entity.Name)}
+            };
         }
+
+        protected override void readEntityData()
+        {
+            throw new NotImplementedException();
+        } 
+        #endregion
     }
 }
