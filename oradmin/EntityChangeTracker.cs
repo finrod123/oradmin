@@ -15,9 +15,21 @@ namespace oradmin
         void Delete();
     }
 
-    public interface IEntityChangeTracker: IDisposable
+    public interface IEditableObjectInfo
+    {
+        bool IsEditing { get; }
+    }
+
+    public interface IEntityStateInfo
     {
         EEntityState EntityState { get; }
+    }
+
+    public interface IEntityChangeTrackerStateInfo :
+        IEntityStateInfo, IEditableObjectInfo { }
+
+    public interface IEntityChangeTracker: IEntityStateInfo, IDisposable
+    {
         void EntityMemberChanging(string member);
         void EntityMemberChanged<TData>(string member, TData value);
     }
@@ -26,9 +38,19 @@ namespace oradmin
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     {
-        void Merge(TData data);
+        void Merge(TData data, EMergeOptions mergeOptions);
     }
 
+    public interface IEDataVersionQueryable
+    {
+        public TData GetOriginalFieldValue<TData>(string fieldName);
+        public TData GetCurrentFieldValue<TData>(string fieldName);
+    }
+
+    public interface IDefaultVersionQueryableByFieldName
+    {
+        public TData GetDefaultValue<TData>(string fieldName);
+    }
     
     /// <summary>
     /// The class that provides a basic tracking functionality for entities,
@@ -43,9 +65,13 @@ namespace oradmin
     /// <typeparam name="TKey">The type of entity data key</typeparam>
     public abstract class EntityChangeTracker<TEntity, TData, TKey> :
         IEntityChangeTracker,
-        IDeletableObject,
+        IEntityChangeTrackerStateInfo,
+        IEDataVersionQueryable,
+        IDefaultVersionQueryableByFieldName,
         IMergeableWithEntityDataContainer<TData, TKey>,
         IEditableObject,
+        IEditableObjectInfo,
+        IDeletableObject,
         IRevertibleChangeTracking
         where TEntity : IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
@@ -64,6 +90,15 @@ namespace oradmin
         /// The dictionary of versioned fields.
         /// </summary>
         protected Dictionary<string, VersionedFieldBase> versionedFields;
+
+        /// <summary>
+        /// Set of policy objects for modifying, editing, version changing
+        /// and merging versioned fields' values
+        /// </summary>
+        private VersionedFieldQueryableModifiablePolicyObject getSetPolicyObject;
+        protected VersionedFieldEditPolicyObject editPolicyObject;
+        private VersionedFieldVersionChangesPolicyObject versionChangesPolicyObject;
+        protected VersionedFieldMergePolicyObject mergePolicyObject;
         #endregion
 
         #region Constuctor
@@ -72,6 +107,8 @@ namespace oradmin
             this.entity = entity;
             // initialize versioned properties
             this.createVersionedFields();
+            // create policy objects for versioned fields manipulation
+            this.createVersionedFieldPolicyObjects();
             // read data from the entity
             this.readEntityData();
         }
@@ -84,67 +121,45 @@ namespace oradmin
         /// </summary>
         protected abstract void createVersionedFields();
         protected abstract void readEntityData();
-        
-        private EDataVersion getDefaultVersion(EEntityState state, bool isEditing)
+        protected abstract void detectChanges();
+        private void createVersionedFieldPolicyObjects()
         {
-            if (isEditing)
-                return EDataVersion.Original;
-
-            switch (state)
-            {
-                case EEntityState.Added:
-                    return EDataVersion.Current;
-                case EEntityState.Modified:
-                    return EDataVersion.Current;
-                case EEntityState.Unchanged:
-                    return EDataVersion.Original;
-                case EEntityState.Deleted:
-                    return EDataVersion.Original;
-                case EEntityState.Detached:
-                    return EDataVersion.Proposed;
-            }
+            this.getSetPolicyObject = new VersionedFieldQueryableModifiablePolicyObject(this);
+            this.editPolicyObject = new VersionedFieldEditPolicyObject();
+            this.versionChangesPolicyObject = new VersionedFieldVersionChangesPolicyObject(this);
+            this.mergePolicyObject = new VersionedFieldMergePolicyObject(this);
         }
-        private bool tryGetField(string fieldName, out VersionedFieldBase field)
+        private TData getFieldValue<TData>(string fieldName, EDataVersion version)
         {
-            if (!versionedFields.TryGetValue(fieldName, out field))
-            {
-                throw new KeyNotFoundException("Field with this key does not exist");
-            }
-
-            return true;
+            return this.getSetPolicyObject.GetValue(
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>,
+                version);
+        }
+        private void setFieldValue<TData>(string fieldName, TData data, EDataVersion version)
+        {
+            this.getSetPolicyObject.SetValue<TData>(
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>,
+                data,
+                version);
         }
         #endregion
 
         #region Public interface
-        public TData GetFieldValue<TData>(string fieldName, EDataVersion version)
+        public TData GetDefaultValue<TData>(string fieldName)
             where TData : class
         {
-            VersionedFieldBase field;
-            tryGetField(fieldName, out field);
-            
-            return (field as VersionedFieldTemplatedBase<TData>).GetValue(version);
-        }
-        public TData GetDefaultFieldValue<TData>(string fieldName)
-            where TData : class
-        {
-            return GetFieldValue<TData>(fieldName,
-                                        getDefaultVersion(this.entityState,
-                                                          this.entity.IsEditing));
+            return this.getSetPolicyObject.GetDefaultValue(
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>);
         }
         public TData GetOriginalFieldValue<TData>(string fieldName)
             where TData : class
         {
-            return GetFieldValue<TData>(fieldName, EDataVersion.Original);
+            return this.getFieldValue<TData>(fieldName, EDataVersion.Original);
         }
         public TData GetCurrentFieldValue<TData>(string fieldName)
             where TData : class
         {
-            return GetFieldValue<TData>(fieldName, EDataVersion.Current);
-        }
-        public TData GetProposedValue<TData>(string fieldName)
-            where TData : class
-        {
-            return GetFieldValue<TData>(fieldName, EDataVersion.Proposed);
+            return this.getFieldValue<TData>(fieldName, EDataVersion.Current);
         }
         #endregion
 
@@ -166,14 +181,13 @@ namespace oradmin
             if(this.entityState == EEntityState.Deleted)
                 throw new InvalidOperationException("Cannot edit deleted object!");
 
-            VersionedFieldBase field;
-            tryGetField(member, out field);
-
-            (field as VersionedFieldTemplatedBase<TData>).
-                SetValue(value, getDefaultVersion(this.entityState, this.entity.IsEditing));
-                                                                                
+            // store the value in a default version
+            this.getSetPolicyObject.SetDefaultValue<TData>(
+                this.versionedFields[member] as VersionedFieldTemplatedBase<TData>,
+                value);                      
         }
         #endregion
+        
         #region IEditableObject Members
         public void BeginEdit()
         {
@@ -181,39 +195,53 @@ namespace oradmin
                 return;
 
             IsEditing = true;
-
-            
         }
         public void CancelEdit()
         {
-            throw new NotImplementedException();
+            if (!IsEditing)
+                return;
+
+            IsEditing = false;
         }
         public void EndEdit()
         {
-            throw new NotImplementedException();
+            if (!IsEditing)
+                return;
+
+            // push changes from the associated entity to the change tracker
+            this.detectChanges();
+            IsEditing = false;
         }
         #endregion
 
         #region IRevertibleChangeTracking Members
+        /// <summary>
+        /// Base method which changes the entity state
+        /// </summary>
         public void RejectChanges()
         {
-            throw new NotImplementedException();
+            switch (this.entityState)
+            {
+                case EEntityState.Deleted:
+                case EEntityState.Modified:
+                    this.entityState = EEntityState.Unchanged;
+                    break;
+            }
         }
         #endregion
 
         #region IChangeTracking Members
+        /// <summary>
+        /// Base method which changes the entity state
+        /// </summary>
         public void AcceptChanges()
         {
-            if (IsEditing)
-                return;
-
             switch (this.entityState)
             {
-                case EEntityState.Deleted:
-                    throw new InvalidOperationException("Cannot accept changes on deleted object!");
                 case EEntityState.Added:
                 case EEntityState.Modified:
-                    ;
+                    this.entityState = EEntityState.Unchanged;
+                    break;
             }
         }
         public bool IsChanged
@@ -242,7 +270,9 @@ namespace oradmin
         #endregion
 
         #region IMergeableWithEntityDataContainer<TData,TKey> Members
-        public abstract void Merge(TData data);
+        public abstract void Merge(TData data, EMergeOptions mergeOptions);
         #endregion
     }
+
+    
 }

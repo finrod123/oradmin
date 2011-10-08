@@ -19,8 +19,10 @@ namespace oradmin
         void ValidateProperty(string property, object value);
     }
 
-    public abstract class EntityValidator<TEntity, TData, TKey> : IEntityValidator, IDataErrorInfo,
-        IEntityWithErrorReporting
+    public abstract class EntityValidator<TEntity, TData, TKey> :
+        IEntityValidator,
+        IDataErrorInfo,
+        IErrorIndicator
         where TEntity : IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>

@@ -35,7 +35,7 @@ namespace oradmin
         event PropertyChangedPassingValueHandler PropertyChangedPassingValue;
     }
 
-    public interface IEntityWithErrorReporting
+    public interface IErrorIndicator
     {
         bool HasErrors { get; }
     }
@@ -129,7 +129,7 @@ namespace oradmin
     public interface IEntityObject<TData, TKey> : IEntityObjectBase<TData, TKey>,
         IEditableObject, IRevertibleChangeTracking,
         INotifyPropertyChanging, INotifyPropertyChanged, INotifyPropertyChangedPassingValue,
-        IDataErrorInfo, IEntityWithDeletableChangeTracker, IEntityWithErrorReporting,
+        IDataErrorInfo, IEntityWithDeletableChangeTracker, IErrorIndicator,
         IEntityDataContainer<TKey>
         where TData : IEntityDataContainer<TKey>
         where TKey  : IEquatable<TKey>

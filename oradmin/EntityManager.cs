@@ -10,8 +10,28 @@ namespace oradmin
     // definice delegatu pro notifikace manageru
     public delegate void EntitiesChangedHandler<TEntity, TData, TKey>(IEnumerable<TEntity> changed)
         where TEntity : IEntityObject<TData, TKey>
-        where TKey    : IEquatable<TKey>;
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>;
 
+    public interface IEntityManagerBase<TEntity, TData, TKey>
+        where TEntity : IEntityObject<TData, TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        bool Load(out IEnumerable<TEntity> entities);
+        bool Refresh(out IEnumerable<TEntity> entities);
+        void AddObject(TEntity entity);
+        void DeleteObject(TEntity entity);
+
+        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesAdded;
+        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesModified;
+        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesDeleted;
+        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesAttached;
+        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesDetached;
+    }
+
+
+    
 
     public interface IEntityManager<TData, TKey>
         where TData : IEntityDataContainer<TKey>
@@ -19,6 +39,8 @@ namespace oradmin
     {
         bool BelongsTo(TData keyedData);
     }
+
+
 
     public interface IEntityManager<TEntity, TData, TKey> : IEntityManager<TData, TKey>
         where TEntity : IEntityObject<TData, TKey>

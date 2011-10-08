@@ -7,139 +7,92 @@ using System.Data;
 
 namespace oradmin
 {
-    public interface IVersionedFieldBase<TVersion>
+    public interface IVersionedFieldVersionQueryable<TVersion>
         where TVersion : IEquatable<TVersion>
     {
         bool HasVersion(TVersion version);
     }
 
-    public interface IVersionedField<TVersion, TData> :
-        IVersionedFieldBase<TVersion>
-        where TVersion : IEquatable<TVersion>
+    public interface IVersionedFieldQueryable<TVersion, TData>
+        where TVersion : struct
     {
         TData GetValue(TVersion version);
+    }
+
+    public interface IVersionedFieldModifiable<TVersion, TData>
+        where TVersion : struct
+    {
         void SetValue(TData data, TVersion version);
     }
 
-    public interface IVersionedFieldWithDefaultValue<TVersion, TData> :
-        IVersionedField<TVersion, TData>
-    {
-        TData DefaultValue { get; }
-    }
+    public interface IVersionedFieldQueryableModifiable<TVersion, TData> :
+        IVersionedFieldQueryable<TVersion, TData>,
+        IVersionedFieldModifiable<TVersion, TData>
+        where TVersion : struct
+    { }
 
-    public abstract class VersionedFieldBase : IVersionedFieldBase<EDataVersion>,
-        IEditableObject, IRevertibleChangeTracking
+    
+    public interface IVersionedField<TVersion, TData> :
+        IVersionedFieldVersionQueryable<TVersion>,
+        IVersionedFieldQueryableAdapter<TVersion>
+        where TVersion : struct
+    { }
+
+    public abstract class VersionedFieldBase :
+        IVersionedFieldVersionQueryable<EDataVersion>,
+        IEditableObjectInfo
     {
         #region Properties
         public bool IsEditing { get; private set; }
         #endregion
-        
+
         #region IVersionedFieldBase<EDataVersion> Members
         public abstract bool HasVersion(EDataVersion version);
-        #endregion
-
-        #region IEditableObject Members
-        public abstract void BeginEdit();
-        public abstract void CancelEdit();
-        public abstract void EndEdit();
-        #endregion
-
-        #region IRevertibleChangeTracking Members
-        public void RejectChanges()
-        {
-            if (!IsEditing)
-            {
-
-            }
-        }
-        #endregion
-
-        #region IChangeTracking Members
-        public void AcceptChanges()
-        {
-            throw new NotImplementedException();
-        }
-        public bool IsChanged
-        {
-            get { throw new NotImplementedException(); }
-        }
         #endregion
     }
 
     public abstract class VersionedFieldTemplatedBase<TData> :
-        VersionedFieldBase
+        VersionedFieldBase,
+        IVersionedFieldQueryableModifiable<EDataVersion, TData>
     {
-        public override bool HasVersion(EDataVersion version)
-        {
-            return GetValue(version) != null;
-        }
-        
         #region IVersionedField<EDataVersion,TData> Members
         public abstract TData GetValue(EDataVersion version);
         public abstract void SetValue(TData data, EDataVersion version);
         #endregion
-
-        #region IRevertibleChangeTracking Members
-        public abstract void RejectChanges();
-        #endregion
-
-        #region IChangeTracking Members
-        public abstract void AcceptChanges();
-        public abstract bool IsChanged { get; }
-        #endregion
     }
 
-    public abstract class VersionedFieldReferenceType<TData> : VersionedFieldTemplatedBase<TData>
+    public abstract class VersionedFieldReferenceType<TData> :
+        VersionedFieldTemplatedBase<TData>
         where TData : class
     {
         #region Members
         protected TData original,
-                        current,
-                        proposed;
+                        current;
         #endregion
-        
+
         public override TData GetValue(EDataVersion version)
         {
+            if (!this.HasVersion(version))
+                throw new VersionNotFoundException(
+                    string.Format("Version {0} not found!", version.ToString()));
+
             switch (version)
             {
                 case EDataVersion.Original:
                     return this.original;
                 case EDataVersion.Current:
                     return this.current;
-                case EDataVersion.Proposed:
-                    return this.proposed;
-                case EDataVersion.Default:
-                    return null;
             }
         }
-        public override void SetValue(TData data, EDataVersion version)
+        public override bool HasVersion(EDataVersion version)
         {
             switch (version)
             {
                 case EDataVersion.Original:
-                    this.original = data;
+                    return this.original != null;
                 case EDataVersion.Current:
-                    this.current = data;
-                case EDataVersion.Proposed:
-                    this.proposed = data;
-                case EDataVersion.Default:
-                    throw new VersionNotFoundException("Default version not found!");
+                    return this.current != null;
             }
-        }
-
-        public override void RejectChanges()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void AcceptChanges()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool IsChanged
-        {
-            get { throw new NotImplementedException(); }
         }
     }
 
@@ -159,10 +112,25 @@ namespace oradmin
                 this.original = null;
                 this.current = null;
             }
-
-            this.proposed = null;
         }
         #endregion
+
+        public override void SetValue(TData data, EDataVersion version)
+        {
+            TData member;
+
+            switch (version)
+            {
+                case EDataVersion.Original:
+                    member = this.original;
+                    break;
+                case EDataVersion.Current:
+                    member = this.current;
+                    break;
+            }
+
+            member = data.Clone() as TData;
+        }
     }
 
     public class VersionedFieldNullableValueType<TData> :
@@ -181,10 +149,25 @@ namespace oradmin
                 this.original = null;
                 this.current = null;
             }
-
-            this.proposed = null;
         }
         #endregion
+
+        public override void SetValue(TData? data, EDataVersion version)
+        {
+            TData? member;
+
+            switch (version)
+            {
+                case EDataVersion.Original:
+                    member = this.original;
+                    break;
+                case EDataVersion.Current:
+                    member = this.current;
+                    break;
+            }
+
+            member = data.Value;
+        }
     }
 
     public class VersionedFieldValueType<TData> : VersionedFieldTemplatedBase<TData>
@@ -192,8 +175,7 @@ namespace oradmin
     {
         #region Members
         TData? original,
-               current,
-               proposed;
+               current;
         #endregion
 
         #region Constructor
@@ -201,37 +183,24 @@ namespace oradmin
         {
             this.original = new TData?(data);
             this.current = new TData?(data);
-            this.proposed = null;
         }
         #endregion
 
         public override TData GetValue(EDataVersion version)
         {
-            TData? tryReturn;
+            if (!this.HasVersion(version))
+                throw new VersionNotFoundException(
+                    string.Format("Version {0} not found!", version.ToString()));
 
             switch (version)
             {
                 case EDataVersion.Original:
-                    tryReturn = this.original;
-                    break;
+                    return this.original.Value;
                 case EDataVersion.Current:
-                    tryReturn = this.current;
-                    break;
-                case EDataVersion.Proposed:
-                    tryReturn = this.proposed;
-                    break;
-                case EDataVersion.Default:
-                    tryReturn = null;
-                    break;
+                    return this.current.Value;
             }
-
-            if (!tryReturn.HasValue)
-                throw new VersionNotFoundException("Version requested not found!");
-
-            return tryReturn.Value;
         }
         public override void SetValue(TData data, EDataVersion version)
-
         {
             switch (version)
             {
@@ -241,36 +210,30 @@ namespace oradmin
                 case EDataVersion.Current:
                     this.current = data;
                     break;
-                case EDataVersion.Proposed:
-                    this.proposed = data;
-                    break;
-                case EDataVersion.Default:
-                    throw new NotSupportedException("Default version not supported");
-                    break;
             }
         }
-
-
-
-        public override void RejectChanges()
+        public override bool HasVersion(EDataVersion version)
         {
-            throw new NotImplementedException();
+            switch (version)
+            {
+                case EDataVersion.Original:
+                    return this.original.HasValue;
+                case EDataVersion.Current:
+                    return this.current.HasValue;
+            }
         }
-        public override void AcceptChanges()
-        {
-            throw new NotImplementedException();
-        }
-        public override bool IsChanged
-        {
-            get { throw new NotImplementedException(); }
-        }
+    }
+
+    public enum EDataVersionWithDefault
+    {
+        Original,
+        Current,
+        Default
     }
 
     public enum EDataVersion
     {
         Original,
-        Current,
-        Proposed,
-        Default
+        Current
     }
 }
