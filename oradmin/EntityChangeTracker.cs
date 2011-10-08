@@ -28,12 +28,21 @@ namespace oradmin
     public interface IEntityChangeTrackerStateInfo :
         IEntityStateInfo, IEditableObjectInfo { }
 
-    public interface IEntityChangeTracker: IEntityStateInfo, IDisposable
+    public interface IEntityChangeTracker<TKey>:
+        IEntityStateInfo, IDisposable
+        where TKey : IEquatable<TKey>
     {
+        IEntityObjectWithDataKey<TKey> Entity { get; }
         void EntityMemberChanging(string member);
         void EntityMemberChanged<TData>(string member, TData value);
     }
 
+    public interface IDeletableChangeTracker<TKey> :
+        IEntityChangeTracker<TKey>, IDeletableObject
+        where TKey : IEquatable<TKey>
+    { }
+
+    
     public interface IMergeableWithEntityDataContainer<TData, TKey>
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
@@ -64,7 +73,7 @@ namespace oradmin
     /// <typeparam name="TData">The type of entity data container</typeparam>
     /// <typeparam name="TKey">The type of entity data key</typeparam>
     public abstract class EntityChangeTracker<TEntity, TData, TKey> :
-        IEntityChangeTracker,
+        IDeletableChangeTracker,
         IEntityChangeTrackerStateInfo,
         IEDataVersionQueryable,
         IDefaultVersionQueryableByFieldName,
@@ -178,9 +187,6 @@ namespace oradmin
         public void EntityMemberChanging(string member) { }
         public void EntityMemberChanged<TData>(string member, TData value)
         {
-            if(this.entityState == EEntityState.Deleted)
-                throw new InvalidOperationException("Cannot edit deleted object!");
-
             // store the value in a default version
             this.getSetPolicyObject.SetDefaultValue<TData>(
                 this.versionedFields[member] as VersionedFieldTemplatedBase<TData>,
@@ -218,7 +224,7 @@ namespace oradmin
         /// <summary>
         /// Base method which changes the entity state
         /// </summary>
-        public void RejectChanges()
+        public virtual void RejectChanges()
         {
             switch (this.entityState)
             {
@@ -234,7 +240,7 @@ namespace oradmin
         /// <summary>
         /// Base method which changes the entity state
         /// </summary>
-        public void AcceptChanges()
+        public virtual void AcceptChanges()
         {
             switch (this.entityState)
             {

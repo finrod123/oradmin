@@ -15,8 +15,7 @@ namespace oradmin
         bool Refresh();
 
         void AddObject(TEntity entity);
-        void DeleteObject(TEntity entity);
-
+        
         bool BelongsTo(TEntity entity);
 
         ICollectionView EntityView { get; }
@@ -56,14 +55,13 @@ namespace oradmin
                 throw new ArgumentNullException("manager");
 
             this.manager = manager;
-            // set collectionviewsource source collection
-            this.viewSource.Source = this.entities;
             // set up event handling
-            this.manager.EntitiesAdded += new EntitiesChangedHandler<TEntity, TData, TKey>(manager_EntitiesAdded);
-            this.manager.EntitiesModified += new EntitiesChangedHandler<TEntity, TData, TKey>(manager_EntitiesModified);
-            this.manager.EntitiesDeleted += new EntitiesChangedHandler<TEntity, TData, TKey>(manager_EntitiesDeleted);
-            this.manager.EntitiesAttached += new EntitiesChangedHandler<TEntity, TData, TKey>(manager_EntitiesAttached);
-            this.manager.EntitiesDetached += new EntitiesChangedHandler<TEntity, TData, TKey>(manager_EntitiesDetached);
+            this.setUpExistenceChangeEventHandling();
+            //this.setUpStateChangeEventHandling();
+            //this.setUpDataChangeEventHandling();
+            // set collectionviewsource source collection
+            this.viewSource = new CollectionViewSource();
+            this.viewSource.Source = this.entities;
         }
         #endregion
 
@@ -73,37 +71,16 @@ namespace oradmin
         /// </summary>
         public void Load()
         {
-            IEnumerable<TEntity> loadedEntities;
-
-            if (!this.manager.Load(out loadedEntities))
-            {
-                this.Loaded = false;
-                return;
-            }
-
-            // do some merging
+            this.Loaded = this.manager.Load(this);
         }
         public bool Loaded { get; private set; }
         public bool Refresh()
         {
-            IEnumerable<TEntity> refreshedEntities;
-
-            if (!this.manager.Refresh(out refreshedEntities))
-            {
-                return false;
-            }
-
-            // do some merging
-
-            return true;
+            return this.manager.Refresh(this);
         }
         public void AddObject(TEntity entity)
         {
             this.manager.AddObject(entity);
-        }
-        public void DeleteObject(TEntity entity)
-        {
-            this.manager.DeleteObject(entity);
         }
         public abstract bool BelongsTo(TEntity entity);
         public ICollectionView EntityView
@@ -113,37 +90,35 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        void manager_EntitiesDeleted(IEnumerable<TEntity> changed)
-        {
-            throw new NotImplementedException();
-        }
-        void manager_EntitiesModified(IEnumerable<TEntity> changed)
-        {
-            throw new NotImplementedException();
-        }
-        void manager_EntitiesAdded(IEnumerable<TEntity> changed)
-        {
-            
-        }
-        void manager_EntitiesDetached(IEnumerable<TEntity> changed)
-        {
-            throw new NotImplementedException();
-        }
-        void manager_EntitiesAttached(IEnumerable<TEntity> changed)
-        {
-            foreach (TEntity entity in changed)
-                if (this.BelongsTo(entity))
-                    this.attachObject(entity);
-        }
         void attachObject(TEntity entity)
         {
             this.entitiesByKey.Add(entity.DataKey, entity);
-            
+            this.entities.Add(entity);
         }
         void detachObject(TEntity entity)
         {
+            this.entitiesByKey.Remove(entity.DataKey);
+            this.entities.Remove(entity);
+        }
+        void setUpStateChangeEventHandling()
+        {
 
         }
+
+
+        void setUpExistenceChangeEventHandling()
+        {
+            
+        }
+
+        void setUpDataChangeEventHandling()
+        {
+
+        }
+        #endregion
+
+        #region Event handlers
+        
         #endregion
     }
 }

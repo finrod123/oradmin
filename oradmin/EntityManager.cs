@@ -7,129 +7,149 @@ using System.Windows.Data;
 
 namespace oradmin
 {
-    // definice delegatu pro notifikace manageru
-    public delegate void EntitiesChangedHandler<TEntity, TData, TKey>(IEnumerable<TEntity> changed)
-        where TEntity : IEntityObject<TData, TKey>
-        where TData : IEntityDataContainer<TKey>
+    #region Delegates for entity changes notification
+		// definice delegatu pro notifikace manageru
+    public delegate void EntityStateChangedHandler<TKey>(
+        IEntityObjectWithDataKeyAndStateInfo<TKey> entity)
+        where TKey : IEquatable<TKey>; 
+    public delegate void EntitiesStateChangedHandler<TKey>(
+        IEnumerable<IEntityObjectWithDataKeyAndStateInfo<TKey>)
         where TKey : IEquatable<TKey>;
 
-    public interface IEntityManagerBase<TEntity, TData, TKey>
+    public delegate void EntitiesDataChangedHandler<TKey>(
+        IEnumerable<IEntityObjectWithDataKey<TKey>> changed)
+        where TKey : IEquatable<TKey>;
+
+    public delegate void EntityDataChangedHandler<TKey>(IEntityObjectWithDataKey<TKey> entity)
+        where TKey : IEquatable<TKey>;
+
+    public delegate void EntityExistenceChangedHandler<TKey>(IEntityObjectWithDataKey<TKey> entity)
+        where TKey : IEquatable<TKey>;
+
+    public delegate void EntitiesExistenceChangedHandler<TKey>(
+        IEnumerable<IEntityObjectWithDataKey<TKey>> entities)
+        where TKey : IEquatable<TKey>;
+
+	#endregion
+
+    #region Interfaces for notifying about entity changes
+		public interface INotifyEntityStateChanged<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        event EntityStateChangedHandler<TKey> EntityStateChanged;
+        event EntitiesStateChangedHandler<TKey> EntitiesStateChanged;
+    }
+
+    public interface INotifyEntityDataChanged<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        event EntityDataChangedHandler<TKey> EntityDataChanged;
+        event EntitiesDataChangedHandler<TKey> EntitiesDataChanged;
+    }
+
+    public interface INotifyEntityExistenceChanged<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        event EntityExistenceChangedHandler<TKey> EntityAdded;
+        event EntityExistenceChangedHandler<TKey> EntityAttached;
+        event EntityExistenceChangedHandler<TKey> EntityDetached;
+
+        event EntitiesExistenceChangedHandler<TKey> EntitiesAdded;
+        event EntitiesExistenceChangedHandler<TKey> EntitiesAttached;
+        event EntitiesExistenceChangedHandler<TKey> EntitiesDetached;
+    }
+	#endregion
+
+    public interface IEntityCollectionErrorIndicator<TEntity, TData, TKey>:
+        IErrorIndicator
         where TEntity : IEntityObject<TData, TKey>
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     {
-        bool Load(out IEnumerable<TEntity> entities);
-        bool Refresh(out IEnumerable<TEntity> entities);
-        void AddObject(TEntity entity);
-        void DeleteObject(TEntity entity);
-
-        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesAdded;
-        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesModified;
-        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesDeleted;
-        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesAttached;
-        event EntitiesChangedHandler<TEntity, TData, TKey> EntitiesDetached;
-    }
-
-
-    
-
-    public interface IEntityManager<TData, TKey>
-        where TData : IEntityDataContainer<TKey>
-        where TKey : IEquatable<TKey>
-    {
-        bool BelongsTo(TData keyedData);
-    }
-
-
-
-    public interface IEntityManager<TEntity, TData, TKey> : IEntityManager<TData, TKey>
-        where TEntity : IEntityObject<TData, TKey>
-        where TData   : IEntityDataContainer<TKey>
-        where TKey    : IEquatable<TKey>
-    {
-        IEntityManager<TEntity, TData, TKey> ParentManager { get; }
-
-        event EntitiesChangedHandler<TEntity, TKey> EntitiesAdded;
-        event EntitiesChangedHandler<TEntity, TKey> EntitiesModified;
-        event EntitiesChangedHandler<TEntity, TKey> EntitiesDeleted;
-
-        bool Loaded { get; }
-        void Load();
-
-        void AddObject(TEntity entity);
-        void AttachObject(TEntity entity);
-        void DeleteObject(TEntity entity);
-        void DetachObject(TEntity entity);
-
-        ListCollectionView View { get; }
-        TEntity CreateObject();
-        void MergeData(IEnumerable<TData> data);
-    }
-
-    public interface IRefreshableEntityManager<TEntity, TData, TKey>
-        where TEntity : EntityObject<TData, TKey>
-        where TData   : IEntityDataContainer<TKey>
-        where TKey    : IEquatable<TKey>
-    {
-        bool Refresh();
-        bool Refresh(IEnumerable<TEntity> entities);
-    }
-
-    public interface IUpdatableEntityManager<TEntity, TData, TKey>
-        where TEntity : EntityObject<TData, TKey>
-        where TData : IEntityDataContainer<TKey>
-        where TKey : IEquatable<TKey>
-    {
-        void SaveChanges();
-        void SaveChanges(IEnumerable<TEntity> entities);
-    }
-
-    public interface IEntityManagerWithErrorReporting<TEntity, TData, TKey>
-        where TEntity : EntityObject<TKey>
-        where TKey : IEquatable<TKey>
-    {
-        bool HasErrors { get; }
         IEnumerable<TEntity> EntitiesInError { get; }
     }
 
+    public interface IEntityManagerForEntityObject<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        void Refresh(IEntityObjectWithDataKey<TKey> entity);
+        void SaveChanges(IEntityObjectWithDataKeyAndStateInfo<TKey> entity);
+    }
+
+    /// <summary>
+    /// Interface to serve EntityCollection
+    /// </summary>
+    /// <typeparam name="TEntity"></typeparam>
+    /// <typeparam name="TData"></typeparam>
+    /// <typeparam name="TKey"></typeparam>
+    public interface IEntityManagerBase<TEntity, TData, TKey>:
+        IEntityCollectionErrorIndicator<TEntity, TData, TKey>,
+        INotifyEntityExistenceChanged<TKey>,
+        INotifyEntityStateChanged<TKey>,
+        INotifyEntityDataChanged<TKey>
+        where TEntity : IEntityObject<TData, TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        bool Load(IEntityCollection<TEntity, TData, TKey> entityCollection);
+        bool Refresh(IEntityCollection<TEntity, TData, TKey> entityCollection);
+        void AddObject(TEntity entity);
+    }
+
+    public interface IEntityManager<TEntity, TData, TKey> :
+        IEntityManagerBase<TEntity, TData, TKey>,
+        IEntityManagerForEntityObject<TKey>
+        where TEntity : IEntityObject<TData, TKey>
+        where TData   : IEntityDataContainer<TKey>
+        where TKey    : IEquatable<TKey>
+    {
+        bool Loaded { get; }
+        void Load();
+
+        bool Refresh();
+        bool Refresh(TEntity entity);
+        bool Refresh(IEnumerable<TEntity> entities);
+
+        void SaveChanges();
+        void SaveChanges(TEntity entity);
+        void SaveChanges(IEnumerable<TEntity> entities);
+
+        void AttachObject(TEntity entity);
+        void DetachObject(TEntity entity);
+
+        TEntity CreateObject();
+
+        IEntityCollection<TEntity, TData, TKey> Entities { get;}
+    }
+
+    
     public abstract class EntityManager<TEntity, TData, TKey> :
-        IEntityManager,
         IEntityManager<TEntity, TData, TKey>,
-        IRefreshableEntityManager<TEntity, TKey>,
-        IUpdatableEntityManager<TEntity, TKey>,
-        IRevertibleChangeTracking, IEntityManagerWithErrorReporting<TEntity, TKey>
+        IRevertibleChangeTracking
         where TEntity : EntityObject<TData, TKey>
         where TData   : class, IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
         #region Members
-        protected IEntityManager parentManager;
-        protected EntityStateManager<TEntity, TKey> entityStateManager;
-        protected Dictionary<EntityKey<TData, TKey>, TEntity> entityByEntityKey =
-            new Dictionary<EntityKey<TData, TKey>, TEntity>();
-        protected Dictionary<TKey, TEntity> entityByDataKey =
+        protected IEntityStateManager<TEntity, TData, TKey> entityStateManager;
+        protected Dictionary<TKey, TEntity> entitiesByKey =
             new Dictionary<TKey, TEntity>();
-        protected EntityDataAdapter<TEntity, TData, TKey> dataAdapter;
-        // observable collection of entities and collection view\
-        ObservableCollection<EntityObject<TKey>> entities =
-            new ObservableCollection<EntityObject<TData, TKey>>();
-        CollectionViewSource view;
+        protected IEntityDataAdapter<TEntity, TData, TKey> dataAdapter;
+        protected IEntityCollection<TEntity, TData, TKey> entityCollection;
         #endregion
 
         #region Constructor
-        protected EntityManager(IEntityManager parentManager,
-            EntityDataAdapter<TEntity, TData, TKey> dataAdapter)
+        protected EntityManager(IEntityDataAdapter<TEntity, TData, TKey> dataAdapter)
         {
-            if (parentManager == null)
-                throw new ArgumentNullException("parentManager");
             if (dataAdapter == null)
                 throw new ArgumentNullException("dataAdapter");
 
-            this.parentManager = parentManager;
+            // store the reference to the entity data adapter
             this.dataAdapter = dataAdapter;
-            this.entityStateManager = new EntityStateManager<TEntity, TData, TKey>();
-            this.view = new CollectionViewSource();
-            this.view.Source = this.entities;
+            // create the entity state manager
+            this.createEntityStateManager();
+            // create the default entity collection
+            this.createEntityCollection();
         }
         #endregion
 
@@ -178,8 +198,7 @@ namespace oradmin
         {
             throw new NotImplementedException();
         }
-        public abstract bool BelongsTo(TData keyedData);
-
+        
         public abstract TEntity CreateObject();
         public void MergeData(IEnumerable<TData> data)
         {
@@ -196,7 +215,7 @@ namespace oradmin
             this.entities.Add(entity);
             // 2) add into dictionaries
             entityByEntityKey.Add(entity.EntityKey, entity);
-            entityByDataKey.Add(entity.DataKey, entity);
+            entitiesByKey.Add(entity.DataKey, entity);
             
             // begin tracking
             addEntityTracking(entity, state);
@@ -217,7 +236,7 @@ namespace oradmin
 
             // already attached entities cannot be attached
             if(entityByEntityKey.ContainsKey(entity.EntityKey) ||
-               entityByDataKey.ContainsKey(entity.DataKey))
+               entitiesByKey.ContainsKey(entity.DataKey))
             {
                 return false;
             }
@@ -234,6 +253,8 @@ namespace oradmin
 
             return true;
         }
+        protected abstract void createEntityCollection();
+        protected abstract void createEntityStateManager();
         #endregion
 
         #region IUpdatableEntityManager Members
@@ -277,30 +298,6 @@ namespace oradmin
         }
         #endregion
 
-        #region IEntityManager Members
-        public IEntityManager<TEntity, TData, TKey> ParentManager
-        {
-            get { return this.parentManager; }
-            private set
-            {
-                if (value != null &&
-                    value.GetType() == GetType())
-                {
-                    this.parentManager = value;
-                }
-            }
-        }
-        #endregion
-
-        #region IEntityManager Members
-        #endregion
-
-        #region IEntityManager Members
-        public event EntitiesChangedHandler<TEntity, TKey> EntitiesAdded;
-        public event EntitiesChangedHandler<TEntity, TKey> EntitiesModified;
-        public event EntitiesChangedHandler<TEntity, TKey> EntitiesDeleted;
-        #endregion
-
         #region Helper methods
         private void OnEntitiesAdded(IEnumerable<TEntity> added)
         {
@@ -328,13 +325,6 @@ namespace oradmin
             {
                 handler(deleted);
             }
-        }
-        #endregion
-
-        #region IEntityManager<TEntity,TData,TKey> Members
-        public ListCollectionView View
-        {
-            get { return this.view.View as ListCollectionView; }
         }
         #endregion
     }

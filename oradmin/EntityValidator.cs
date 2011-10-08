@@ -31,6 +31,10 @@ namespace oradmin
         /// <summary>
         /// Associated entity
         /// </summary>
+        protected TEntity entity; 
+        /// <summary>
+        /// Validation context
+        /// </summary>
         protected ValidationContext validationContext;
         /// <summary>
         /// List of entity error messages
@@ -109,6 +113,10 @@ namespace oradmin
             PropertyValidatorsLists propertyValidators,
             ValidationContext validationContext)
         {
+            if(entity == null)
+                throw new ArgumentNullException("entity");
+
+            this.entity = entity;
             // set up references to custom static validators
             this.entityValidators = entityValidators;
             this.propertyValidators = propertyValidators;
@@ -240,6 +248,10 @@ namespace oradmin
                 propertyErrors.Add(propertyName, new List<string>());
             }
         }
+        /// <summary>
+        /// Initializes property values by reading them from the associated entity
+        /// in custom subclass.
+        /// </summary>
         protected abstract void initializePropertyValues();
         #endregion
 

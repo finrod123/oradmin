@@ -10,11 +10,9 @@ using System.Collections.Specialized;
 
 namespace oradmin
 {
-    using PropertysPair = KeyValuePair<string, IEnumerable<Attribute>>;
-    using PropertyAttributesLists = IEnumerable<KeyValuePair<string, IEnumerable<Attribute>>>;
-    using EntityAttributesList = IEnumerable<Attribute>;
-
     public delegate void PropertyChangedPassingValueHandler(object sender, PropertyChangedPassingValueEventArgs e);
+    public delegate void HasErrorChangedHandler(IErrorIndicator sender);
+
     public class PropertyChangedPassingValueEventArgs : PropertyChangedEventArgs
     {
         #region Constructor
@@ -35,77 +33,46 @@ namespace oradmin
         event PropertyChangedPassingValueHandler PropertyChangedPassingValue;
     }
 
+    public interface IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        TKey DataKey { get; }
+    }
+
+    public interface IEntityObjectWithDataKey<TKey> :
+        IEntityDataContainer<TKey>,
+        IEquatable<IEntityObjectWithDataKey<TKey>>
+        where TKey : IEquatable<TKey> { }
+
+    public interface IEntityObjectWithDataKeyAndStateInfo<TKey> :
+        IEntityObjectWithDataKey<TKey>, IEntityStateInfo
+        where TKey : IEquatable<TKey>
+    { }
+
     public interface IErrorIndicator
     {
         bool HasErrors { get; }
+        event HasErrorChangedHandler HasErrorChanged;
     }
 
-    public interface IRefreshableEntityObject
+    public interface IRefreshableObject
     {
         void Refresh();
     }
 
-    public interface IUpdatableEntityObject
+    public interface IUpdatableObject
     {
         void SaveChanges();
     }
 
-    public interface IEntityChangeTrackerBase
+    public interface IEntityWithDeletableChangeTracker<TKey>
+        where TKey : IEquatable<TKey>
     {
         bool HasTracker { get; }
+        void SetChangeTracker(IDeletableChangeTracker<TKey> tracker);
     }
 
-    public interface IEntityWithChangeTracker : IEntityChangeTrackerBase
-    {
-        void SetChangeTracker(IEntityChangeTracker tracker);
-    }
-
-    public interface IEntityWithDeletableChangeTracker : IEntityChangeTrackerBase
-    {
-        void SetChangeTracker(IDeletableEntityChangeTracker tracker);
-    }
-
-    public class EntityKey<TData, TKey> : IEquatable<EntityKey<TData, TKey>>
-        where TData : IEntityDataContainer<TKey>
-        where TKey  : IEquatable<TKey>
-    {
-        #region Constructor
-        public EntityKey(IEntityObjectBase<TData, TKey> entity)
-        {
-            if (entity == null)
-                throw new ArgumentNullException("entity");
-
-            if (entity.EntityKey != null)
-                throw new ApplicationException("Entity already associated!");
-
-            Entity = entity;
-        }
-        #endregion
-
-        #region Properties
-        public IEntityObjectBase Entity { get; private set; }
-        #endregion
-
-        #region IEquatable<EntityKey> Members
-        public bool Equals(EntityKey other)
-        {
-            return object.ReferenceEquals(this.Entity, other.Entity);
-        }
-        #endregion
-
-        #region Object override
-        public override bool Equals(object obj)
-        {
-            EntityKey other = obj as EntityKey;
-
-            if (other != null)
-                return this.Equals(other);
-
-            return base.Equals(obj);
-        }
-        #endregion
-    }
-
+    
     public enum EEntityState
     {
         Unchanged,
@@ -115,26 +82,17 @@ namespace oradmin
         Detached
     }
 
-    /// <summary>
-    /// Serves EntityKey class
-    /// </summary>
-    public interface IEntityObjectBase<TData, TKey>
-        where TData : IEntityDataContainer<TKey>
-        where TKey  : IEquatable<TKey>
-    {
-        EntityKey<TData, TKey> EntityKey { get; }
-        IEntityManager<TData, TKey> Manager { get; }
-    }
-
-    public interface IEntityObject<TData, TKey> : IEntityObjectBase<TData, TKey>,
-        IEditableObject, IRevertibleChangeTracking,
+    public interface IEntityObject<TData, TKey> :
+        IEntityObjectWithDataKeyAndStateInfo<TKey>, IEntityWithDeletableChangeTracker<TKey>,
+        IEntityDataContainer<TKey>, IMergeableWithEntityDataContainer<TData, TKey>,
+        IEditableObject, IDeletableObject, IRefreshableObject, IUpdatableObject,
+        IEditableObjectInfo, IRevertibleChangeTracking,
         INotifyPropertyChanging, INotifyPropertyChanged, INotifyPropertyChangedPassingValue,
-        IDataErrorInfo, IEntityWithDeletableChangeTracker, IErrorIndicator,
-        IEntityDataContainer<TKey>
+        IDataErrorInfo, IErrorIndicator
         where TData : IEntityDataContainer<TKey>
-        where TKey  : IEquatable<TKey>
+        where TKey : IEquatable<TKey>
     {
-        EEntityState EntityState { get; }
+        IEntityManagerForEntityObject<TKey> Manager { get; }
     }
 
     public abstract class EntityObject<TData, TKey> : IEntityObject<TData, TKey>
@@ -142,95 +100,39 @@ namespace oradmin
             where TKey  : IEquatable<TKey>
     {
         #region Members
-        protected EntityKey<TData, TKey> entityKey;
-        protected EEntityState entityState;
         protected IEntityValidator validator;
-        protected IDeletableEntityChangeTracker changeTracker;
-        protected IEntityManager<TData, TKey> manager;
-        #endregion
-
-        #region Static members
-        protected static EntityAttributesList entityAttributes;
-        protected static PropertyAttributesLists propertyAttributes;
-        protected static Type entityType;
-
-        public static EntityAttributesList GetEntityAttributes()
-        {
-            return entityAttributes.AsEnumerable();
-        }
-        public static PropertyAttributesLists GetPropertyAttributes()
-        {
-            return propertyAttributes.AsEnumerable();
-        }
-        protected static void Initialize(Type type)
-        {
-            if (!SetEntityType(type))
-                return;
-
-            LoadTypeInfo();
-        }
-        private static bool SetEntityType(Type type)
-        {
-            if (type == null ||
-               entityType != null ||
-               !type.IsSubclassOf(typeof(EntityObject)))
-            {
-                return false;
-            }
-
-            entityType = type;
-
-            return true;
-        }
-        private static void LoadTypeInfo()
-        {
-            LoadEntityAttributes();
-            LoadPropertyAttributes();
-        }
-        private static void LoadEntityAttributes()
-        {
-            entityAttributes = entityType.GetCustomAttributes(true) as EntityAttributesList;
-        }
-        private static void LoadPropertyAttributes()
-        {
-            propertyAttributes = new List<PropertyAttributesPair>();
-
-            foreach (PropertyInfo p in entityType.GetProperties())
-            {
-                IEnumerable<Attribute> atts = Attribute.GetCustomAttributes(p);
-
-                if (atts.Count() > 0)
-                {
-                    (propertyAttributes as List<PropertyAttributesPair>).Add(
-                        new KeyValuePair<string, IEnumerable<Attribute>>(
-                            p.Name, atts));
-                }
-            }
-        }
+        protected IDeletableChangeTracker<TKey> changeTracker;
+        private bool hasErrors;
         #endregion
 
         #region Constructor
-        protected EntityObject(IEntityManager<TData, TKey> manager)
+        protected EntityObject(IEntityManagerForEntityObject<TKey> manager)
         {
             if (manager == null)
                 throw new ArgumentNullException("manager");
 
-            this.manager = manager;
-            // assign an entity key
-            this.entityKey = new EntityKey<TData, TKey>(this);
-            // assign a validator
-            createValidator();
+            this.Manager = manager;
         }
         #endregion
-
-        #region Helper methods
-        protected abstract void createValidator();
-        #endregion
-
+        
         #region IEditableObject Members
-        public abstract void BeginEdit();
-        public abstract void CancelEdit();
-        public abstract void EndEdit();
+        public virtual void BeginEdit()
+        {
+            if (IsEditing)
+                return;
+
+            IsEditing = true;
+            // call begin edit on a change tracker
+            
+        }
+        public virtual void CancelEdit()
+        {
+
+        }
+        public virtual void EndEdit()
+        {
+
+        }
         #endregion
 
         #region IRevertibleChangeTracking Members
@@ -278,17 +180,44 @@ namespace oradmin
                 handler(this, new PropertyChangedPassingValueEventArgs(propertyName, value));
             }
         }
+        protected void OnHasErrorChanged()
+        {
+            HasErrorChangedHandler handler = this.HasErrorChanged;
+
+            if (handler != null)
+            {
+                handler(this);
+            }
+        }
         protected void reportMemberChanging(string member)
         {
-            this.changeTracker.EntityMemberChanging(member);
+            if (!IsEditing)
+                this.changeTracker.EntityMemberChanging(member);
+
             OnPropertyChanging(member);
         }
         protected void reportMemberChanged<TMember>(string member, TMember value)
         {
-            this.changeTracker.EntityMemberChanged(member, value);
-            OnPropertyChanged(member);
-        }
+            if (!IsEditing)
+                this.changeTracker.EntityMemberChanged(member, value);
 
+            OnPropertyChanged(member);
+            OnPropertyChangedPassingValue(member, value);
+        }
+        protected void propertySetter<TProperty>(
+            ref TProperty property, TProperty value, string propertyName)
+        {
+            if (IsEditing)
+            {
+                this.reportMemberChanging(propertyName);
+                // TODO: custom notifications here?
+                this.validator.ValidateProperty(propertyName, value);
+                property = value;
+                this.reportMemberChanged<TProperty>(propertyName, value);
+                // TODO: custom notification here?
+            } else
+                throw new InvalidOperationException("Cannot edit when not in editing mode.");
+        }
         #endregion
 
         #region IDataErrorInfo Members
@@ -321,38 +250,12 @@ namespace oradmin
         {
             if (HasTracker)
             {
-                this.changeTracker.
+                
             }
-        }
-        #endregion
-
-        #region IEntityWithErrorReporting Members
-        public abstract bool HasErrors { get; }
-        #endregion
-
-        #region IEntityObject<TKey> Members
-        public IEntityManager<TData, TKey> Manager
-        {
-            get { return this.manager; }
         }
         #endregion
 
         #region IEntityWithChangeTracker Members
-        public void SetChangeTracker(IDeletableEntityChangeTracker tracker)
-        {
-            if (this.changeTracker != null)
-            {
-                this.changeTracker.Dispose();
-            }
-
-            if (tracker == null ||
-                    (tracker != null &&
-                     tracker.Entity == this)
-                )
-            {
-                this.changeTracker = tracker;
-            }
-        }
         public bool HasTracker
         {
             get { return this.changeTracker != null; }
@@ -374,18 +277,63 @@ namespace oradmin
         }
         #endregion
 
-        #region IEntityObjectBase<TData,TKey> Members
-        public EntityKey<TData, TKey> EntityKey
+        #region IRefreshableObject Members
+        public void Refresh()
         {
-            get { return this.entityKey; }
+            this.Manager.Refresh(this);
         }
         #endregion
-    }
+        #region IUpdatableObject Members
+        public void SaveChanges()
+        {
+            this.Manager.SaveChanges(this);
+        }
+        #endregion
+        
+        #region IErrorIndicator Members
+        public bool HasErrors
+        {
+            get { return this.hasErrors; }
+            private set
+            {
+                if (this.hasErrors != value)
+                {
+                    this.hasErrors = value;
+                    OnHasErrorChanged();
+                }
+            }
+        }
+        public event HasErrorChangedHandler HasErrorChanged;
+        #endregion
 
-    public interface IEntityDataContainer<TKey>
-        where TKey : IEquatable<TKey>
-    {
-        TKey DataKey { get; }
+        #region IEntityWithDeletableChangeTracker<TKey> Members
+        public void SetChangeTracker(IDeletableChangeTracker<TKey> tracker)
+        {
+            if (this.changeTracker != null)
+            {
+                this.changeTracker.Dispose();
+            }
+
+            if (tracker == null ||
+                    (tracker != null &&
+                     tracker.Entity == this)
+                )
+            {
+                this.changeTracker = tracker;
+            }
+        }
+        #endregion
+
+        #region IEntityObject<TData,TKey> Members
+        public IEntityManagerForEntityObject<TKey> Manager { get; private set; }
+        #endregion
+
+        #region IEquatable<IEntityObjectWithDataKey<TKey>> Members
+        public bool Equals(IEntityObjectWithDataKey<TKey> other)
+        {
+            return this.DataKey.Equals(other.DataKey);
+        }
+        #endregion
     }
 
     public enum EMergeOptions
