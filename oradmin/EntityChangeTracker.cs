@@ -37,8 +37,10 @@ namespace oradmin
         void EntityMemberChanged<TData>(string member, TData value);
     }
 
-    public interface IDeletableChangeTracker<TKey> :
-        IEntityChangeTracker<TKey>, IDeletableObject
+    public interface IDeletableMergeableChangeTracker<TData, TKey> :
+        IEntityChangeTracker<TKey>, IDeletableObject,
+        IMergeableWithEntityDataContainer<TData, TKey>
+        where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     { }
 
@@ -47,7 +49,13 @@ namespace oradmin
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     {
-        void Merge(TData data, EMergeOptions mergeOptions);
+        /// <summary>
+        /// Method called to merge the entity with a change tracler
+        /// </summary>
+        /// <param name="data">Data container</param>
+        /// <param name="mergeOptions">Additional options</param>
+        /// <returns>Value indicating the change of current version of data</returns>
+        bool Merge(TData data, EMergeOptions mergeOptions);
     }
 
     public interface IEDataVersionQueryable
@@ -73,7 +81,7 @@ namespace oradmin
     /// <typeparam name="TData">The type of entity data container</typeparam>
     /// <typeparam name="TKey">The type of entity data key</typeparam>
     public abstract class EntityChangeTracker<TEntity, TData, TKey> :
-        IDeletableChangeTracker,
+        IDeletableMergeableChangeTracker<TData, TKey>,
         IEntityChangeTrackerStateInfo,
         IEDataVersionQueryable,
         IDefaultVersionQueryableByFieldName,
@@ -276,7 +284,17 @@ namespace oradmin
         #endregion
 
         #region IMergeableWithEntityDataContainer<TData,TKey> Members
-        public abstract void Merge(TData data, EMergeOptions mergeOptions);
+        public virtual bool Merge(TData data, EMergeOptions mergeOptions)
+        {
+            
+        }
+        #endregion
+
+        #region IEntityChangeTracker<TKey> Members
+        public IEntityObjectWithDataKey<TKey> Entity
+        {
+            get { return this.entity; }
+        }
         #endregion
     }
 

@@ -65,11 +65,12 @@ namespace oradmin
         void SaveChanges();
     }
 
-    public interface IEntityWithDeletableChangeTracker<TKey>
+    public interface IEntityWithDeletableChangeTracker<TData, TKey>
+        where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     {
         bool HasTracker { get; }
-        void SetChangeTracker(IDeletableChangeTracker<TKey> tracker);
+        void SetChangeTracker(IDeletableMergeableChangeTracker<TData, TKey> tracker);
     }
 
     
@@ -83,7 +84,7 @@ namespace oradmin
     }
 
     public interface IEntityObject<TData, TKey> :
-        IEntityObjectWithDataKeyAndStateInfo<TKey>, IEntityWithDeletableChangeTracker<TKey>,
+        IEntityObjectWithDataKeyAndStateInfo<TKey>, IEntityWithDeletableChangeTracker<TData, TKey>,
         IEntityDataContainer<TKey>, IMergeableWithEntityDataContainer<TData, TKey>,
         IEditableObject, IDeletableObject, IRefreshableObject, IUpdatableObject,
         IEditableObjectInfo, IRevertibleChangeTracking,
@@ -101,7 +102,7 @@ namespace oradmin
     {
         #region Members
         protected IEntityValidator validator;
-        protected IDeletableChangeTracker<TKey> changeTracker;
+        protected IDeletableMergeableChangeTracker<TData, TKey> changeTracker;
         private bool hasErrors;
         #endregion
 
@@ -218,6 +219,7 @@ namespace oradmin
             } else
                 throw new InvalidOperationException("Cannot edit when not in editing mode.");
         }
+        protected abstract void readCurrentData(TData data);
         #endregion
 
         #region IDataErrorInfo Members
@@ -244,8 +246,21 @@ namespace oradmin
         #endregion
 
         #region Public methods
-        public abstract void Merge(TData data,
-            EMergeOptions mergeOptions);
+        public bool Merge(TData data,
+            EMergeOptions mergeOptions)
+        {
+            // check valid entity state for the operation
+            if (this.EntityState == EEntityState.Detached)
+                throw new InvalidOperationException("Cannot merge data into a detached entity");
+
+            // entity is not detached -> it has a change tracker
+            bool currentDataChanged = this.changeTracker.Merge(data, mergeOptions);
+            // when not editing, read current data into the entity cache, if not deleted
+            if (this.EntityState != EEntityState.Deleted)
+                this.readCurrentData(data);
+
+            return currentDataChanged;
+        }
         public void Delete()
         {
             if (HasTracker)
@@ -307,7 +322,7 @@ namespace oradmin
         #endregion
 
         #region IEntityWithDeletableChangeTracker<TKey> Members
-        public void SetChangeTracker(IDeletableChangeTracker<TKey> tracker)
+        public void SetChangeTracker(IDeletableMergeableChangeTracker<TData, TKey> tracker)
         {
             if (this.changeTracker != null)
             {
