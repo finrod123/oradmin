@@ -34,7 +34,7 @@ namespace oradmin
     
     public interface IVersionedField<TVersion, TData> :
         IVersionedFieldVersionQueryable<TVersion>,
-        IVersionedFieldQueryableAdapter<TVersion>
+        IValueGetterForVersionedFieldAdapter<TVersion>
         where TVersion : struct
     { }
 

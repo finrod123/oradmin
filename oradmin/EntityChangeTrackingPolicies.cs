@@ -4,12 +4,12 @@ using System.Data;
 
 namespace oradmin
 {
-    public interface IVersionedFieldInitialReadPolicyObject
+    public interface IInitialReadToVersionedFieldAdapter
     {
         void ReadData<TData>(VersionedFieldTemplatedBase<TData> field, TData data);
     }
 
-    public interface IVersionedFieldEditPolicyObject
+    public interface IEditVersionedFieldAdapter
     {
         // saves proposed data as current and returns whether the current data
         // had changed; (returns which data versions had changed?)
@@ -17,7 +17,7 @@ namespace oradmin
             where TData : IEquatable<TData>;
     }
 
-    public interface IVersionedFieldVersionChangesPolicyObject
+    public interface IVersionChangesForVersionedFieldAdapter
     {
         void AcceptChanges<TData>(VersionedFieldTemplatedBase<TData> field)
             where TData : IEquatable<TData>;
@@ -27,7 +27,7 @@ namespace oradmin
             where TData : IEquatable<TData>;
     }
 
-    public interface IVersionedFieldMergePolicyObject
+    public interface IMergeForVersionedFieldAdapter
     {
         // merges data into the field and returns whether current data was changed
         // (returns the flag combination of changed data versions???)
@@ -36,17 +36,17 @@ namespace oradmin
             where TData : IEquatable<TData>;
     }
 
-    public interface IVersionedFieldQueryableAdapter<TVersion>
+    public interface IValueGetterForVersionedFieldAdapter<TVersion>
         where TVersion : struct
     {
         public TData GetValue<TData>(VersionedFieldTemplatedBase<TData> field, TVersion version);
     }
 
-    public interface IVersionedFieldEDataVersionQueryable:
-        IVersionedFieldQueryableAdapter<EDataVersion>
+    public interface IValueGetterForVersionedFieldEDataVersionAdapter:
+        IValueGetterForVersionedFieldAdapter<EDataVersion>
     { }
 
-    public interface IVersionedFieldModifiableAdapter<TVersion>
+    public interface IValueSetterForVersionedFieldAdapter<TVersion>
         where TVersion : struct
     {
         // returns whether data was changed (which version?)
@@ -55,25 +55,36 @@ namespace oradmin
             where TData : IEquatable<TData>;
     }
 
-    public interface IVersionedFieldEDataVersionModifiable :
-        IVersionedFieldModifiableAdapter<EDataVersion>
+    public interface IValueSetterForVersionedFieldEDataVersionAdapter :
+        IValueSetterForVersionedFieldAdapter<EDataVersion>
     { }
 
-    public interface IVersionedFieldQueryableModifiableAdapter<TVersion> :
-        IVersionedFieldQueryableAdapter<TVersion>,
-        IVersionedFieldModifiableAdapter<TVersion>
+    public interface IValueGetterSetterForVersionedFieldAdapter<TVersion> :
+        IValueGetterForVersionedFieldAdapter<TVersion>,
+        IValueSetterForVersionedFieldAdapter<TVersion>
         where TVersion : struct { }
 
-    public interface IVersionedFieldEDataVersionQueryableModifiable :
-        IVersionedFieldQueryableModifiableAdapter<EDataVersion>
+    public interface IValueGetterSetterForVersionedFieldEDataVersionAdapter :
+        IValueGetterForVersionedFieldEDataVersionAdapter,
+        IValueSetterForVersionedFieldEDataVersionAdapter
     { }
 
-    public interface IVersionedFieldDefaultVersionQueryableAdapter
+    public interface IDefaultVersionGetterForVersionedFieldAdapter<TVersion>
+        where TVersion : struct
+    {
+        TVersion GetDefaultVersion();
+    }
+
+    public interface IDefaultVersionGetterForVersionedFieldEDataVersionAdapter :
+        IDefaultVersionGetterForVersionedFieldAdapter<EDataVersion>
+    { }
+
+    public interface IDefaultVersionValueGetterForVersionedFieldAdapter
     {
         public TData GetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field);
     }
 
-    public interface IVersionedFieldDefaultVersionModifiableAdapter
+    public interface IDefaultVersionValueSetterForVersionedFieldAdapter
     {
         // sets the default value of the field and returns whether it has changed
         // (returns which data versions were changed?)
@@ -82,22 +93,22 @@ namespace oradmin
             where TData : IEquatable<TData>;
     }
 
-    public interface IVersionedFieldDefaultVersionQueryableModifiableAdapter :
-        IVersionedFieldDefaultVersionQueryableAdapter,
-        IVersionedFieldDefaultVersionModifiableAdapter
+    public interface IDefaultVersionValueGetterSetterForVersionedFieldAdapter :
+        IDefaultVersionValueGetterForVersionedFieldAdapter,
+        IDefaultVersionValueSetterForVersionedFieldAdapter
     { }
 
-    public class VersionedFieldInitialReadPolicyObject :
-        IVersionedFieldInitialReadPolicyObject
+    public class InitialReadToVersionedFieldAdapter :
+        IInitialReadToVersionedFieldAdapter
     {
         #region Members
         IEntityStateInfo info;
-        IVersionedFieldEDataVersionModifiable fieldSetter;
+        IValueSetterForVersionedFieldEDataVersionAdapter fieldSetter;
         #endregion
 
         #region Constructor
-        public VersionedFieldInitialReadPolicyObject(IEntityStateInfo info,
-            IVersionedFieldEDataVersionModifiable fieldSetter)
+        public InitialReadToVersionedFieldAdapter(IEntityStateInfo info,
+            IValueSetterForVersionedFieldEDataVersionAdapter fieldSetter)
         {
             if (info == null)
                 throw new ArgumentNullException("info");
@@ -131,15 +142,15 @@ namespace oradmin
         #endregion
     }
 
-    public class VersionedFieldEditPolicyObject :
-        IVersionedFieldEditPolicyObject
+    public class EditVersionedFieldAdapter :
+        IEditVersionedFieldAdapter
     {
         #region Members
-        IVersionedFieldEDataVersionModifiable fieldSetter;
+        IValueSetterForVersionedFieldEDataVersionAdapter fieldSetter;
         #endregion
 
         #region Constructor
-        public VersionedFieldEditPolicyObject(IVersionedFieldEDataVersionModifiable fieldSetter)
+        public EditVersionedFieldAdapter(IValueSetterForVersionedFieldEDataVersionAdapter fieldSetter)
         {
             if (fieldSetter == null)
                 throw new ArgumentException("field setter");
@@ -157,18 +168,18 @@ namespace oradmin
         #endregion
     }
 
-    public class VersionedFieldVersionChangesPolicyObject :
-        IVersionedFieldVersionChangesPolicyObject
+    public class VersionChangesForVersionedFieldAdapter :
+        IVersionChangesForVersionedFieldAdapter
     {
         #region Members
         IEntityStateInfo info;
-        IVersionedFieldEDataVersionQueryableModifiable fieldGetterSetter;
+        IValueGetterSetterForVersionedFieldEDataVersionAdapter fieldGetterSetter;
         #endregion
 
         #region Constructor
-        public VersionedFieldVersionChangesPolicyObject(
+        public VersionChangesForVersionedFieldAdapter(
             IEntityChangeTrackerStateInfo info,
-            IVersionedFieldEDataVersionQueryableModifiable fieldGetterSetter
+            IValueGetterSetterForVersionedFieldEDataVersionAdapter fieldGetterSetter
             )
         {
             if (info == null)
@@ -226,18 +237,18 @@ namespace oradmin
         #endregion
     }
 
-    public class VersionedFieldMergePolicyObject :
-        IVersionedFieldMergePolicyObject
+    public class MergeForVersionedFieldAdapter :
+        IMergeForVersionedFieldAdapter
     {
         #region Members
         IEntityStateInfo info;
-        IVersionedFieldEDataVersionModifiable fieldSetter;
+        IValueSetterForVersionedFieldEDataVersionAdapter fieldSetter;
         #endregion
 
         #region Constructor
-        public VersionedFieldMergePolicyObject(
+        public MergeForVersionedFieldAdapter(
             IEntityStateInfo info,
-            IVersionedFieldEDataVersionModifiable fieldSetter)
+            IValueSetterForVersionedFieldEDataVersionAdapter fieldSetter)
         {
             if (info == null)
                 throw new ArgumentNullException("info");
@@ -272,7 +283,7 @@ namespace oradmin
                     changed = fieldSetter.SetValue<TData>(
                               field,
                               data,
-                              EDataVersion.Original) ||
+                              EDataVersion.Original) |
 
                               fieldSetter.SetValue<TData>(
                               field,
@@ -286,16 +297,18 @@ namespace oradmin
         #endregion
     }
 
-    public class VersionedFieldQueryableModifiablePolicyObject :
-        IVersionedFieldEDataVersionQueryableModifiable,
-        IVersionedFieldDefaultVersionQueryableModifiableAdapter
+    public class ValueGetterSetterWithDefaultVersionForVersionedFieldEDataVersionAdapter :
+        IValueGetterSetterForVersionedFieldEDataVersionAdapter,
+        IDefaultVersionValueGetterSetterForVersionedFieldAdapter,
+        IDefaultVersionGetterForVersionedFieldEDataVersionAdapter,
     {
         #region Members
         IEntityChangeTrackerStateInfo info;
         #endregion
 
         #region Constructor
-        public VersionedFieldQueryableModifiablePolicyObject(IEntityChangeTrackerStateInfo info)
+        public ValueGetterSetterWithDefaultVersionForVersionedFieldEDataVersionAdapter(
+            IEntityChangeTrackerStateInfo info)
         {
             if (info == null)
                 throw new ArgumentNullException("info");
@@ -325,22 +338,22 @@ namespace oradmin
         #region IVersionedFieldDefaultVersionQueryable Members
         public TData GetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field)
         {
-            return field.GetValue(this.getDefaultVersion());
+            return field.GetValue(this.GetDefaultVersion());
         }
         public bool SetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field, TData value)
             where TData : IEquatable<TData>
         {
             TData oldData = this.GetDefaultValue(field);
-            field.SetValue(value, this.getDefaultVersion());
+            field.SetValue(value, this.GetDefaultVersion());
 
             return !oldData.Equals(value);
         }
         #endregion
 
-        #region Helper methods
-        private EDataVersion getDefaultVersion()
+        #region IDefaultVersionGetterForVersionedFieldAdapter<EDataVersion> Members
+        public EDataVersion GetDefaultVersion()
         {
-            switch (this.info.EntityState)
+ 	        switch (this.info.EntityState)
             {
                 case EEntityState.Added:
                     return EDataVersion.Current;

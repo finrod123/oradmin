@@ -10,15 +10,40 @@ using System.Collections.Specialized;
 
 namespace oradmin
 {
-    public interface IDeletableObject
+    #region Delegates, Event Args and Interfaces for DataChanged and StateChanged tracker events
+    public class TrackerDataChangedEventArgs : EventArgs
+    { }
+    public delegate void TrackerDataChangedHandler(object sender, TrackerDataChangedEventArgs e);
+    /// <summary>
+    /// Interface for data changes notification (caught by entity and forwarded)
+    /// </summary>
+    public interface INotifyTrackerDataChanged
     {
-        void Delete();
+        event TrackerDataChangedHandler TrackerDataChanged;
     }
 
-    public interface IEditableObjectInfo
+    public class TrackerStateChangedEventArgs : EventArgs
     {
-        bool IsEditing { get; }
+        #region Members
+        public EEntityState OldState { get; private set; }
+        #endregion
+
+        #region Constructor
+        public TrackerStateChangedEventArgs(EEntityState oldState)
+        {
+            this.OldState = oldState;
+        }
+        #endregion
     }
+    public delegate void TrackerStateChangedHandler(object sender, TrackerStateChangedEventArgs e);
+    /// <summary>
+    /// Interface for state changes notification (caught by entity and forwarded)
+    /// </summary>
+    public interface INotifyTrackerStateChanged
+    {
+        event TrackerStateChangedHandler TrackerStateChanged;
+    }
+    #endregion
 
     public interface IEntityStateInfo
     {
@@ -36,10 +61,13 @@ namespace oradmin
         void EntityMemberChanging(string member);
         void EntityMemberChanged<TData>(string member, TData value);
     }
-
-    public interface IDeletableMergeableChangeTracker<TData, TKey> :
-        IEntityChangeTracker<TKey>, IDeletableObject,
-        IMergeableWithEntityDataContainer<TData, TKey>
+    
+    public interface IChangeTrackerForEntityObject<TData, TKey> :
+        IEntityChangeTracker<TKey>,
+        IEditableObject, IEditableObjectInfo, IDeletableObject, IUndeletableObject,
+        IMergeableWithEntityDataContainer<TData, TKey>,
+        INotifyTrackerDataChanged, INotifyTrackerStateChanged,
+        IRevertibleChangeTracking
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     { }
@@ -58,13 +86,13 @@ namespace oradmin
         bool Merge(TData data, EMergeOptions mergeOptions);
     }
 
-    public interface IEDataVersionQueryable
+    public interface IGetterEDataVersionByFieldName
     {
         public TData GetOriginalFieldValue<TData>(string fieldName);
         public TData GetCurrentFieldValue<TData>(string fieldName);
     }
 
-    public interface IDefaultVersionQueryableByFieldName
+    public interface IDefaultVersionGetterByFieldName
     {
         public TData GetDefaultValue<TData>(string fieldName);
     }
@@ -81,18 +109,18 @@ namespace oradmin
     /// <typeparam name="TData">The type of entity data container</typeparam>
     /// <typeparam name="TKey">The type of entity data key</typeparam>
     public abstract class EntityChangeTracker<TEntity, TData, TKey> :
-        IDeletableMergeableChangeTracker<TData, TKey>,
+        IChangeTrackerForEntityObject<TData, TKey>,
         IEntityChangeTrackerStateInfo,
-        IEDataVersionQueryable,
-        IDefaultVersionQueryableByFieldName,
+        IGetterEDataVersionByFieldName,
+        IDefaultVersionGetterByFieldName,
         IMergeableWithEntityDataContainer<TData, TKey>,
         IEditableObject,
         IEditableObjectInfo,
         IDeletableObject,
         IRevertibleChangeTracking
         where TEntity : IEntityObject<TData, TKey>
-        where TData   : IEntityDataContainer<TKey>
-        where TKey    : IEquatable<TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
     {
         #region Members
         /// <summary>
@@ -108,14 +136,24 @@ namespace oradmin
         /// </summary>
         protected Dictionary<string, VersionedFieldBase> versionedFields;
 
+        #region Field adapters
         /// <summary>
         /// Set of policy objects for modifying, editing, version changing
         /// and merging versioned fields' values
         /// </summary>
-        private VersionedFieldQueryableModifiablePolicyObject getSetPolicyObject;
-        protected VersionedFieldEditPolicyObject editPolicyObject;
-        private VersionedFieldVersionChangesPolicyObject versionChangesPolicyObject;
-        protected VersionedFieldMergePolicyObject mergePolicyObject;
+        private InitialReadToVersionedFieldAdapter fieldInitialReader;
+        private ValueGetterSetterWithDefaultVersionForVersionedFieldEDataVersionAdapter
+            fieldGetterSetter;
+        protected EditVersionedFieldAdapter fieldEditor;
+        private VersionChangesForVersionedFieldAdapter fieldVersionChanger;
+        protected MergeForVersionedFieldAdapter fieldMerger;
+        #endregion
+
+        #region Members for change detection
+        private bool hasChanges;
+        private int changedFieldsCount;
+        #endregion
+
         #endregion
 
         #region Constuctor
@@ -125,9 +163,9 @@ namespace oradmin
             // initialize versioned properties
             this.createVersionedFields();
             // create policy objects for versioned fields manipulation
-            this.createVersionedFieldPolicyObjects();
+            this.createVersionedFieldAdapters();
             // read data from the entity
-            this.readEntityData();
+            this.readInitialData();
         }
         #endregion
 
@@ -137,27 +175,78 @@ namespace oradmin
         /// to propertyName keys in "versionedFields" dictionary
         /// </summary>
         protected abstract void createVersionedFields();
-        protected abstract void readEntityData();
-        protected abstract void detectChanges();
-        private void createVersionedFieldPolicyObjects()
+        protected abstract void readInitialData();
+        protected abstract bool readChanges();
+        private void createVersionedFieldAdapters()
         {
-            this.getSetPolicyObject = new VersionedFieldQueryableModifiablePolicyObject(this);
-            this.editPolicyObject = new VersionedFieldEditPolicyObject();
-            this.versionChangesPolicyObject = new VersionedFieldVersionChangesPolicyObject(this);
-            this.mergePolicyObject = new VersionedFieldMergePolicyObject(this);
+            this.fieldGetterSetter =
+                new ValueGetterSetterWithDefaultVersionForVersionedFieldEDataVersionAdapter(this);
+
+            this.fieldInitialReader = new InitialReadToVersionedFieldAdapter(
+                this, this.fieldGetterSetter);
+
+            this.fieldEditor = new EditVersionedFieldAdapter(this.fieldGetterSetter);
+
+            this.fieldVersionChanger = new VersionChangesForVersionedFieldAdapter(
+                this, this.fieldGetterSetter);
+
+            this.fieldMerger = new MergeForVersionedFieldAdapter(
+                this, this.fieldGetterSetter);
         }
         private TData getFieldValue<TData>(string fieldName, EDataVersion version)
         {
-            return this.getSetPolicyObject.GetValue(
+            return this.fieldGetterSetter.GetValue(
                 this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>,
                 version);
         }
-        private void setFieldValue<TData>(string fieldName, TData data, EDataVersion version)
+        private bool setFieldValue<TData>(string fieldName, TData data, EDataVersion version)
+            where TData : IEquatable<TData>
         {
-            this.getSetPolicyObject.SetValue<TData>(
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>,
+            // load a field
+            VersionedFieldTemplatedBase<TData> field =
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>;
+            // load current changes state
+            bool oldHasChanges = this.fieldVersionChanger.HasChanges<TData>(field);
+            // set the new value
+            bool fieldCurrentDataChanged = this.fieldGetterSetter.SetValue<TData>(
+                            field,
+                            data,
+                            version);
+
+            // detect the HasChanges change
+            if (oldHasChanges != this.fieldVersionChanger.HasChanges<TData>(field))
+            {
+                // based on whether the changes emerged or ceased to exist,
+                // increase, or decrease the changed field count
+                if (oldHasChanges)
+                    --this.changedFieldsCount;
+                else
+                    ++this.changedFieldsCount;
+
+                // set the new value of "hasChanged", if there are any fields with changes
+                this.hasChanges = this.changedFieldsCount > 0;
+
+                // set the entity state accordingly
+                if (!this.hasChanges)
+                {
+                    if (this.entityState == EEntityState.Modified)
+                        this.entityState = EEntityState.Unchanged;
+                } else
+                {
+                    if (this.entityState == EEntityState.Unchanged)
+                        this.entityState = EEntityState.Modified;
+                }
+            }
+
+            return fieldCurrentDataChanged;
+        }
+        private bool setFieldDefaultValue<TData>(string fieldName, TData data)
+            where TData : IEquatable<TData>
+        {
+            return this.setFieldValue<TData>(
+                fieldName,
                 data,
-                version);
+                this.fieldGetterSetter.GetDefaultVersion());
         }
         #endregion
 
@@ -165,7 +254,7 @@ namespace oradmin
         public TData GetDefaultValue<TData>(string fieldName)
             where TData : class
         {
-            return this.getSetPolicyObject.GetDefaultValue(
+            return this.fieldGetterSetter.GetDefaultValue(
                 this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>);
         }
         public TData GetOriginalFieldValue<TData>(string fieldName)
@@ -194,36 +283,68 @@ namespace oradmin
         }
         public void EntityMemberChanging(string member) { }
         public void EntityMemberChanged<TData>(string member, TData value)
+            where TData : IEquatable<TData>
         {
-            // store the value in a default version
-            this.getSetPolicyObject.SetDefaultValue<TData>(
-                this.versionedFields[member] as VersionedFieldTemplatedBase<TData>,
-                value);                      
+            // remember the old state
+            EEntityState oldState = this.entityState;
+            // set the default value;
+            // if changes occur, report them to the entity
+            if (this.setFieldDefaultValue(member, value))
+            {
+                this.OnTrackerDataChanged();
+            }
+
+            // if state change occured, report it to the entity
+            if (oldState != this.EntityState)
+            {
+                this.OnTrackerStateChanged(oldState);
+            }
         }
         #endregion
-        
+
         #region IEditableObject Members
         public void BeginEdit()
         {
+            // if already editing, return
             if (IsEditing)
                 return;
 
+            // set the editation flag
             IsEditing = true;
         }
         public void CancelEdit()
         {
+            // if not editing, return
             if (!IsEditing)
                 return;
 
+            // set the editation flag
             IsEditing = false;
         }
         public void EndEdit()
         {
+            // if not editing, return
             if (!IsEditing)
                 return;
 
-            // push changes from the associated entity to the change tracker
-            this.detectChanges();
+            // store the old entity state
+            EEntityState oldState = this.EntityState;
+            
+            // push changes from the associated entity to the change tracker;
+            // if a data change occured, report it to the entity
+            if (this.readChanges())
+            {
+                this.OnTrackerDataChanged();
+            }
+
+            // check for a state change;
+            // if a state change occured, report it to the entity
+            if (oldState != this.EntityState)
+            {
+                this.OnTrackerStateChanged(oldState);
+            }
+
+            // set the editation flag
             IsEditing = false;
         }
         #endregion
@@ -232,35 +353,17 @@ namespace oradmin
         /// <summary>
         /// Base method which changes the entity state
         /// </summary>
-        public virtual void RejectChanges()
-        {
-            switch (this.entityState)
-            {
-                case EEntityState.Deleted:
-                case EEntityState.Modified:
-                    this.entityState = EEntityState.Unchanged;
-                    break;
-            }
-        }
+        public abstract void RejectChanges();
         #endregion
 
         #region IChangeTracking Members
         /// <summary>
         /// Base method which changes the entity state
         /// </summary>
-        public virtual void AcceptChanges()
-        {
-            switch (this.entityState)
-            {
-                case EEntityState.Added:
-                case EEntityState.Modified:
-                    this.entityState = EEntityState.Unchanged;
-                    break;
-            }
-        }
+        public abstract void AcceptChanges();
         public bool IsChanged
         {
-            get { throw new NotImplementedException(); }
+            get { return this.hasChanges; }
         }
         #endregion
 
@@ -279,21 +382,51 @@ namespace oradmin
         public void Delete()
         {
             // mark as deleted -> collapse data versions ???
-            throw new NotImplementedException();
+            this.entityState = EEntityState.Deleted;
+            // collapse data?
+        }
+        public void UnDelete()
+        {
+            this.entityState = EEntityState.Unchanged;
+            // renew data?
         }
         #endregion
 
         #region IMergeableWithEntityDataContainer<TData,TKey> Members
-        public virtual bool Merge(TData data, EMergeOptions mergeOptions)
-        {
-            
-        }
+        public abstract bool Merge(TData data, EMergeOptions mergeOptions);
         #endregion
 
         #region IEntityChangeTracker<TKey> Members
         public IEntityObjectWithDataKey<TKey> Entity
         {
             get { return this.entity; }
+        }
+        #endregion
+
+
+        #region INotifyTrackerDataChanged Members
+        public event TrackerDataChangedHandler TrackerDataChanged;
+        private void OnTrackerDataChanged()
+        {
+            TrackerDataChangedHandler handler = this.TrackerDataChanged;
+
+            if (handler != null)
+            {
+                handler(this, new TrackerDataChangedEventArgs());
+            }
+        }
+        #endregion
+
+        #region INotifyTrackerStateChanged Members
+        public event TrackerStateChangedHandler TrackerStateChanged;
+        private void OnTrackerStateChanged(EEntityState oldState)
+        {
+            TrackerStateChangedHandler handler = this.TrackerStateChanged;
+
+            if (handler != null)
+            {
+                handler(this, new TrackerStateChangedEventArgs(oldState));
+            }
         }
         #endregion
     }

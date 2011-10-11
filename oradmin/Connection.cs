@@ -10,8 +10,8 @@ using System.IO;
 
 namespace oradmin
 {
-    using EntityValidators = IEnumerable<MyValidationAttribute>;
-    using PropertyValidators = Dictionary<string, IEnumerable<MyValidationAttribute>>;
+    using EntityValidators = IEnumerable<IMyValidationAttribute>;
+    using PropertyValidators = Dictionary<string, IEnumerable<IMyValidationAttribute>>;
     using ConnectionKey = String;
 
     public class UpdateException : Exception
@@ -74,7 +74,7 @@ namespace oradmin
         #endregion
     }
 
-    public class Connection : EntityObject<ConnectionData, ConnectionKey>,
+    public class Connection : EntityObjectBase<ConnectionData, ConnectionKey>,
         IConnectionBase, IConnectDescriptorBase
     {
         #region Constants
@@ -478,7 +478,7 @@ namespace oradmin
             };
         }
 
-        protected override void readEntityData()
+        protected override void readInitialData()
         {
             throw new NotImplementedException();
         } 

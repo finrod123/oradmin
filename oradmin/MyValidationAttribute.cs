@@ -8,34 +8,81 @@ using System.Reflection;
 
 namespace oradmin
 {
-    public abstract class MyValidationAttribute : ValidationAttribute
+    public enum EValidationLevel
     {
-        #region Properties
-        public Type TargetValidatorType { get; private set; }
-        #endregion
-
-        #region Constructor
-        public MyValidationAttribute(string errorMessage, Type targetvalidatorType) :
-            base(errorMessage)
-        {
-            if (targetvalidatorType == null)
-                throw new ArgumentNullException("targetValidator");
-
-            this.TargetValidatorType = targetvalidatorType;
-        }
-        #endregion
-
-        #region Public validation methods
-        public abstract ValidationResult GetValidationResult(object value, ValidationContext context);
-        #endregion
-
-        #region Helper methods
-        private string FormatErrorMessage(params object[] errorParts)
-        {
-            return string.Format(ErrorMessage, errorParts);
-        }
-        #endregion
+        Property,
+        CrossProperty,
+        Entity,
+        CrossEntity
     }
+
+    /// <summary>
+    /// Equality comparer for MyValidation attributes.
+    /// Two MyValidationAttributes instances are equal, if and only if
+    /// their types equal. This is valid approach assuming there will
+    /// be only one instance of MyValidationAttribute on a class or property.
+    /// Otherwise it would be necessary to add ID resolution.
+    /// </summary>
+    #region MyValidationAttribute equality comparer
+    public class MyValidationAttributeEqualityComparer :
+    EqualityComparer<IMyValidationAttribute>
+    {
+        public override bool Equals(IMyValidationAttribute x, IMyValidationAttribute y)
+        {
+            return x.GetType()
+                    .Equals(
+                   y.GetType());
+        }
+        public override int GetHashCode(IMyValidationAttribute obj)
+        {
+            return obj.GetHashCode();
+        }
+    } 
+    #endregion
+    
+    /// <summary>
+    /// Interface to add to custom attributes to support custom validator targetting
+    /// and validation levels.
+    /// </summary>
+    public interface IMyValidationAttribute
+    {
+        public Type TargetValidatorType { get; private set; }
+        string ErrorMessage { get; }
+        
+        ValidationResult GetValidationResult(object value, ValidationContext context);
+        string FormatErrorMessage(params object[] errorParts);
+    }
+
+    /// <summary>
+    /// Interface for single-property level validation
+    /// </summary>
+    public interface IMyValidationPropertyAttribute : IMyValidationAttribute
+    { }
+
+    /// <summary>
+    /// Interface for cross-property level validation. It provides the enumeration of properties,
+    /// which participate in cross-property validation process.
+    /// </summary>
+    public interface IMyValidationCrossPropertyAttribute : IMyValidationAttribute
+    {
+        IEnumerable<string> MemberNames { get; }
+    }
+
+    /// <summary>
+    /// Interface for entity-level validation.
+    /// </summary>
+    public interface IMyValidationEntityAttribute : IMyValidationAttribute
+    { }
+
+    /// <summary>
+    /// Interface for cross-entity level validation.
+    /// </summary>
+    public interface IMyValidationCrossEntityAttribute : IMyValidationAttribute
+    { }
+
+    /// <summary>
+    /// Validation result class with an error message and a list of erroneous members
+    /// </summary>
     public class ValidationResult
     {
         public static ValidationResult Success =
@@ -54,6 +101,12 @@ namespace oradmin
         public IEnumerable<string> MemberNames { get; private set; }
         #endregion
     }
+
+    /// <summary>
+    /// Validation context with object type, ibject instance and member fields
+    /// to describe the context of validation. Arbitrarily it provides validation
+    /// service to custom entities.
+    /// </summary>
     public class ValidationContext : IServiceProvider
     {
         #region Members

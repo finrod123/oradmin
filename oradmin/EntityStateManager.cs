@@ -7,7 +7,7 @@ using System.Text;
 namespace oradmin
 {
     public interface IEntityStateManager<TEntity, TData, TKey>
-        where TEntity : EntityObject<TData, TKey>
+        where TEntity : EntityObjectBase<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
@@ -15,9 +15,9 @@ namespace oradmin
         void RemoveTracker(TEntity entity);
     }
 
-    public class EntityStateManager<TEntity, TData, TKey>:
+    public abstract class EntityStateManager<TEntity, TData, TKey>:
         IEntityStateManager<TEntity, TData, TKey>
-        where TEntity : EntityObject<TData, TKey>
+        where TEntity : EntityObjectBase<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
@@ -25,15 +25,15 @@ namespace oradmin
         protected abstract IEntityChangeTracker CreateTracker(TEntity entity,
             EEntityState state);
         #endregion
-        
-        #region IEntityStateManager Members
-        public void AddTracker(TEntity entity, EEntityState state)
+
+        #region IEntityStateManager<TEntity,TData,TKey> Members
+        public void AddTracker(TEntity entity)
         {
-            // entitywithchangetracker.HasChangeTracker???
+            throw new NotImplementedException();
         }
         public void RemoveTracker(TEntity entity)
         {
-            
+            throw new NotImplementedException();
         }
         #endregion
     }

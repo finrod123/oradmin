@@ -8,44 +8,69 @@ using System.Reflection;
 
 namespace oradmin
 {
-    using PropertyValidatorsLists = Dictionary<string, IEnumerable<MyValidationAttribute>>;
-    using PropertyValidatorsPair = KeyValuePair<string, IEnumerable<MyValidationAttribute>>;
-    using EntityValidatorsList = IEnumerable<MyValidationAttribute>;
-    
+    #region Using directives
 
+    #region Validation attributes
+    using ValidatorsEnumeration = IEnumerable<IMyValidationAttribute>;
+    using PropertyValidatorsEnumeration = IEnumerable<IMyValidationPropertyAttribute>;
+    using PropertyValidatorsEnumerations =
+        Dictionary<string, IEnumerable<IMyValidationPropertyAttribute>>;
+    using CrossPropertyValidatorsEnumeration = IEnumerable<IMyValidationCrossPropertyAttribute>;
+    using EntityValidatorsEnumeration = IEnumerable<IMyValidationEntityAttribute>;
+    using CrossEntityValidatorsEnumeration = IEnumerable<IMyValidationCrossEntityAttribute>;
+    #endregion
+
+    #region Validation attributes error holders
+    using ValidatorsErrorMessages = Dictionary<IMyValidationAttribute, string>;
+    using PropertyValidatorsErrorMessages = Dictionary<IMyValidationPropertyAttribute, string>;
+    using PropertiesValidatorsErrorMessages =
+        Dictionary<string, Dictionary<IMyValidationPropertyAttribute, string>>;
+    
+    using CrossPropertyValidatorsErrorMessages =
+        Dictionary<IMyValidationCrossPropertyAttribute, string>;
+    using EntityValidatorsErrorMessages = Dictionary<IMyValidationEntityAttribute, string>;
+    using CrossEntityValidatorsErrorMessages =
+        Dictionary<IMyValidationCrossEntityAttribute, string>;
+    #endregion
+
+    #region Helper structures
+    using ValidatorsList = List<IMyValidationAttribute>;
+    using CrossPropertyValidatorsList = List<IMyValidationCrossPropertyAttribute>;
+    using EntityValidatorsList = List<IMyValidationEntityAttribute>;
+    using CrossEntityValidatorsList = List<IMyValidationCrossEntityAttribute>;
+    using PropertyErrorIndicators = Dictionary<string, bool>;
+    #endregion
+
+    #endregion
+
+    #region Interfaces
     public interface IEntityValidator
     {
         void ValidateEntity();
         void ValidateProperty(string property, object value);
     }
+    #endregion
 
+    #region Entity validation class
     public abstract class EntityValidator<TEntity, TData, TKey> :
-        IEntityValidator,
-        IDataErrorInfo,
-        IErrorIndicator
+    IEntityValidator,
+    IDataErrorInfo,
+    IErrorIndicator
         where TEntity : IEntityObject<TData, TKey>
-        where TData   : IEntityDataContainer<TKey>
-        where TKey    : IEquatable<TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
     {
         #region Members
         /// <summary>
         /// Associated entity
         /// </summary>
-        protected TEntity entity; 
+        protected TEntity entity;
+
         /// <summary>
         /// Validation context
         /// </summary>
         protected ValidationContext validationContext;
-        /// <summary>
-        /// List of entity error messages
-        /// </summary>
-        protected List<string> entityErrors =
-            new List<string>();
-        /// <summary>
-        /// Lists of property error messages
-        /// </summary>
-        protected Dictionary<string, List<string>> propertyErrors =
-            new Dictionary<string, List<string>>();
+
         // List of cached current property values (in order to access then during entity validation)
         protected Dictionary<string, object> propertyValues;
         #endregion
@@ -53,47 +78,82 @@ namespace oradmin
         #region Static methods
         protected static void Initialize(
             Type validatorType,
-            out EntityValidatorsList entityValidators,
-            out PropertyValidatorsLists propertyValidators,
+            out ValidatorsEnumeration crossEntityValidators,
+            out ValidatorsEnumeration entityValidators,
+            out ValidatorsEnumeration crossPropertyValidators,
+            out PropertyValidatorsEnumerations propertyValidators,
             out List<string> propertyNames)
         {
             // try to set the validator type
             if (!validatorType.IsSubclassOf(typeof(EntityValidator<TEntity, TData, TKey>)))
             {
+                crossEntityValidators = null;
                 entityValidators = null;
+                crossPropertyValidators = null;
                 propertyValidators = null;
                 propertyNames = null;
                 return;
             }
 
-            LoadEntityValidators(validatorType, out entityValidators);
+            // load cross-property validators, entity validators and cross-entity validators
+            LoadEntityLevelValidators(
+                validatorType,
+                out crossEntityValidators,
+                out entityValidators,
+                out crossPropertyValidators);
+            
+            // load property validators
             LoadPropertyValidators(validatorType, out propertyValidators, out propertyNames);
         }
-        protected static void LoadEntityValidators(Type validatorType,
-            out EntityValidatorsList entityValidators)
+        protected static void LoadEntityLevelValidators(
+            Type validatorType,
+            out CrossEntityValidatorsEnumeration crossEntityValidators,
+            out EntityValidatorsEnumeration entityValidators,
+            out CrossPropertyValidatorsEnumeration crossPropertyValidators)
         {
-            entityValidators =
-                from validator in typeof(TEntity).GetCustomAttributes(
-                    typeof(MyValidationAttribute), true) as IEnumerable<MyValidationAttribute>
-                where validator.TargetValidatorType.Equals(validatorType)
-                select validator;
+            CrossEntityValidatorsList crossEntityValidatorsList =
+                new CrossEntityValidatorsList();
+            EntityValidatorsList entityValidatorsList =
+                new EntityValidatorsList();
+            CrossPropertyValidatorsList crossPropertyValidatorsList =
+                new CrossPropertyValidatorsList();
+
+            foreach (IMyValidationAttribute validator
+                in typeof(TEntity).GetCustomAttributes(typeof(IMyValidationAttribute), true))
+            {
+                if (!validator.TargetValidatorType.Equals(validatorType))
+                    continue;
+
+                if (typeof(IMyValidationCrossPropertyAttribute).Equals(validator.GetType()))
+                    crossPropertyValidatorsList.Add(validator as IMyValidationCrossPropertyAttribute);
+                else if (typeof(IMyValidationEntityAttribute).Equals(validator.GetType()))
+                    entityValidatorsList.Add(validator as IMyValidationEntityAttribute);
+                else if (typeof(IMyValidationCrossEntityAttribute).Equals(validator.GetType()))
+                    crossEntityValidatorsList.Add(validator as IMyValidationCrossEntityAttribute);
+            }
+
+            crossEntityValidators = crossEntityValidatorsList.AsEnumerable();
+            entityValidators = entityValidatorsList.AsEnumerable();
+            crossPropertyValidators = crossPropertyValidatorsList.AsEnumerable();
         }
-        protected static void LoadPropertyValidators(Type validatorType,
-            out PropertyValidatorsLists propertyValidators,
+        
+        protected static void LoadPropertyValidators(
+            Type validatorType,
+            out PropertyValidatorsEnumerations propertyValidators,
             out List<string> propertyNames)
         {
-            propertyValidators = new Dictionary<string, IEnumerable<MyValidationAttribute>>();
+            propertyValidators = new PropertyValidatorsEnumerations();
             propertyNames = new List<string>();
 
             foreach (PropertyInfo p in typeof(TEntity).GetProperties())
             {
-                IEnumerable<MyValidationAttribute> atts =
-                    from attribute in p.GetCustomAttributes(typeof(MyValidationAttribute), true)
-                    as IEnumerable<MyValidationAttribute>
+                PropertyValidatorsEnumeration atts =
+                    from attribute in p.GetCustomAttributes(typeof(IMyValidationPropertyAttribute), true)
+                    as PropertyValidatorsEnumeration
                     where attribute.TargetValidatorType.Equals(validatorType)
                     select attribute;
 
-                if(atts.Count() > 0)
+                if (atts.Count() > 0)
                 {
                     propertyValidators.Add(p.Name, atts);
                     propertyNames.Add(p.Name);
@@ -102,50 +162,75 @@ namespace oradmin
         }
         #endregion
 
-        protected EntityValidatorsList entityValidators;
-        protected PropertyValidatorsLists propertyValidators;
-        
+        #region Error detection members
+        private bool hasEntityErrors;
+        private PropertyErrorIndicators propertyErrorsIndicators =
+            new PropertyErrorIndicators();
+        private int propertyErrorsCount;
+        #endregion
+
+        #region Entity and property Validators
+        protected CrossEntityValidatorsEnumeration crossEntityValidators;
+        protected EntityValidatorsEnumeration entityValidators;
+        protected CrossPropertyValidatorsEnumeration crossPropertyValidators;
+        protected PropertyValidatorsEnumerations propertyValidators;
+        #endregion
+
+        #region ValidationAttributes in error holders
+        protected CrossEntityValidatorsErrorMessages crossEntityErrors =
+            new CrossEntityValidatorsErrorMessages();
+        protected EntityValidatorsErrorMessages entityErrors =
+            new EntityValidatorsErrorMessages();
+        protected CrossPropertyValidatorsErrorMessages crossPropertyErrors =
+            new CrossPropertyValidatorsErrorMessages();
+
+        // TODO: nutno inicializovat
+        protected PropertiesValidatorsErrorMessages propertiesErrors =
+            new PropertiesValidatorsErrorMessages();
+        #endregion
+
         #region Constructors
         protected EntityValidator(
             TEntity entity,
             List<string> propertyNames,
-            EntityValidatorsList entityValidators,
-            PropertyValidatorsLists propertyValidators,
+            CrossEntityValidatorsEnumeration crossEntityValidators,
+            EntityValidatorsEnumeration entityValidators,
+            CrossPropertyValidatorsEnumeration crossPropertyValidators,
+            PropertyValidatorsEnumerations propertyValidators,
             ValidationContext validationContext)
         {
-            if(entity == null)
+            if (entity == null)
                 throw new ArgumentNullException("entity");
 
             this.entity = entity;
             // set up references to custom static validators
+            this.crossEntityValidators = crossEntityValidators;
             this.entityValidators = entityValidators;
+            this.crossPropertyValidators = crossPropertyValidators;
             this.propertyValidators = propertyValidators;
+            // set up validation context
             this.validationContext = validationContext;
             // initialize property dictionaries
-            this.initializePropertyErrors(propertyNames);
+            this.initializePropertyErrorIndicatorsAndMessages(propertyNames);
             this.initializePropertyValues();
             // set up event bindings
             entity.PropertyChangedPassingValue += new PropertyChangedPassingValueHandler(entity_PropertyChangedPassingValue);
         }
         #endregion
-        
+
         #region IDataErrorInfo Members
         public string Error
         {
             get
             {
-                return
-                    string.Join(Environment.NewLine,
-                                entityErrors.ToArray());
+                return "";
             }
         }
         public string this[string columnName]
         {
             get
             {
-                return
-                    string.Join(Environment.NewLine,
-                                propertyErrors[columnName].ToArray());
+                return "";
             }
         }
         #endregion
@@ -169,7 +254,7 @@ namespace oradmin
             clearEntityOnlyErrors();
             validationContext.MemberName = string.Empty;
 
-            foreach (MyValidationAttribute validator in entityValidators)
+            foreach (IMyValidationAttribute validator in entityValidators)
             {
                 ValidationResult result =
                     validator.GetValidationResult(null, validationContext);
@@ -185,17 +270,16 @@ namespace oradmin
         }
         public void ValidateProperty(string propertyName, object value)
         {
-            clearPropertyError(propertyName);
             validationContext.MemberName = propertyName;
 
-            foreach (MyValidationAttribute validator in propertyValidators[propertyName])
+            foreach (IMyValidationAttribute validator in this.propertyValidators[propertyName])
             {
                 ValidationResult result = validator.GetValidationResult(
                     value, validationContext);
 
                 if (result != ValidationResult.Success)
                 {
-                    addPropertyErrorsToProperties(result.ErrorMessage, result.MemberNames);
+                    this.addValidatorErrorToProperties(validator, result);
                     HasErrors = true;
                 }
             }
@@ -203,32 +287,52 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        private void clearErrors()
+        private void addValidatorErrorToProperties(
+            IMyValidationAttribute validator,
+            ValidationResult badResult)
         {
-            clearEntityOnlyErrors();
-            clearPropertyErrors();
-        }
-        private void clearEntityOnlyErrors()
-        {
-            entityErrors.Clear();
-        }
-        private void clearPropertyErrors()
-        {
-            foreach (List<string> errors in propertyErrors.Values)
+            // get validation result data
+            IEnumerable<string> badPropertiesNames = badResult.MemberNames;
+            string errorMessage = badResult.ErrorMessage;
+
+            // walk all bad properties and add the error message to their errors
+            foreach (string propertyName in badPropertiesNames)
             {
-                errors.Clear();
+                ValidatorsErrorMessages propertyErrorsMessages =
+                    this.propertiesErrors[propertyName];
+
+                // add error information to property errors dictionary
+                if (!propertyErrorsMessages.ContainsKey(validator))
+                    propertyErrorsMessages.Add(validator, errorMessage);
+                else
+                    propertyErrorsMessages[validator] = errorMessage;
+
+                // set error indicator for the affected bad property member to true
+                this.propertyErrorsIndicators[propertyName] = true;
             }
         }
-        private void clearPropertyError(string propertyName)
+        private void clearPropertyValidationError(string propertyName,
+            IMyValidationPropertyAttribute validator)
         {
-            propertyErrors[propertyName].Clear();
+            PropertyValidatorsErrorMessages propertyErrors =
+                this.propertiesErrors[propertyName];
+            // remove validation error
+            propertyErrors.Remove(validator);
+            // check for property errors left
+            this.propertyErrorsIndicators[propertyName] = propertyErrors.Count > 0;
         }
-        private void addPropertyErrorsToProperties(string errorMessage,
-            IEnumerable<string> propertyNames)
+
+        private void clearValidatorErrorFromProperties(IMyValidationAttribute validator)
         {
-            foreach (string propertyName in propertyNames)
+            foreach (string possiblyAffectedMember in validator.MemberNames)
             {
-                propertyErrors[propertyName].Add(errorMessage);
+                ValidatorsErrorMessages propertyErrorMessages =
+                    this.propertiesErrors[possiblyAffectedMember];
+                // remove validator error from property validator error set
+                propertyErrorMessages.Remove(validator);
+                // check for remaining property errors
+                this.propertyErrorsIndicators[possiblyAffectedMember] =
+                    propertyErrorMessages.Count > 0;
             }
         }
         void entity_PropertyChangedPassingValue(object sender, PropertyChangedPassingValueEventArgs e)
@@ -240,12 +344,14 @@ namespace oradmin
                 propertyValues[propertyName] = e.Value;
             }
         }
-        
-        protected void initializePropertyErrors(List<string> propertyNames)
+        protected void initializePropertyErrorIndicatorsAndMessages(List<string> propertyNames)
         {
             foreach (string propertyName in propertyNames)
             {
-                propertyErrors.Add(propertyName, new List<string>());
+                this.propertyErrorsIndicators.Add(propertyName, false);
+                this.propertiesErrors.Add(
+                    propertyName,
+                    new Dictionary<IMyValidationAttribute, string>());
             }
         }
         /// <summary>
@@ -258,5 +364,6 @@ namespace oradmin
         #region IEntityWithErrorReporting Members
         public bool HasErrors { get; private set; }
         #endregion
-    }
+    } 
+    #endregion
 }
