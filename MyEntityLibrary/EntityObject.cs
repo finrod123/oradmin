@@ -37,7 +37,7 @@ namespace oradmin
     public class EntityHasErrorChangedEventArgs : EventArgs
     {
         #region Members
-        IErrorIndicator Entity { get; private set; }
+        public IErrorIndicator Entity { get; private set; }
         #endregion
 
         public EntityHasErrorChangedEventArgs(IErrorIndicator entity)
@@ -54,7 +54,7 @@ namespace oradmin
     public class EntitiesHasErrorsChangedEventArgs : EventArgs
     {
         #region Members
-        IEnumerable<IErrorIndicator> Entities { get; private set; }
+        public IEnumerable<IErrorIndicator> Entities { get; private set; }
         #endregion
 
         #region Constructor
@@ -118,8 +118,7 @@ namespace oradmin
         INotifyEntityDeleted<TKey>,
         INotifyEntityStateChanged<TKey>,
         INotifyEntityDataChanged<TKey>,
-        IDataErrorInfo, IErrorIndicator, INotifyHasErrorsChanged,
-        IEntityWithDeletableChangeTracker<TData, TKey>
+        IDataErrorInfo, IErrorIndicator, INotifyHasErrorsChanged
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     { }
@@ -275,7 +274,8 @@ namespace oradmin
 
             this.OnPropertyChanging(member);
         }
-        protected void reportMemberChanged<TMember>(string member, TMember value)
+        protected void reportMemberChanged<T>(string member, T value)
+            where T : IEquatable<T>
         {
             if (!IsEditing)
                 this.changeTracker.EntityMemberChanged(member, value);
@@ -283,8 +283,9 @@ namespace oradmin
             OnPropertyChanged(member);
             OnPropertyChangedPassingValue(member, value);
         }
-        protected void propertySetter<TProperty>(
-            ref TProperty property, TProperty value, string propertyName)
+        protected void propertySetter<T>(
+            ref T property, T value, string propertyName)
+            where T : IEquatable<T>
         {
             if (IsEditing)
             {
@@ -301,7 +302,7 @@ namespace oradmin
                     this.OnHasErrorChanged();
                 }
                 // report member change
-                this.reportMemberChanged<TProperty>(propertyName, value);
+                this.reportMemberChanged(propertyName, value);
                 // TODO: custom notification here?
             } else
                 throw new InvalidOperationException("Cannot edit when not in editing mode.");
@@ -354,7 +355,7 @@ namespace oradmin
         #endregion
 
         #region IEntityDataContainer Members
-        public abstract TKey DataKey { get; private set; }
+        public abstract TKey DataKey { get; }
         #endregion
 
         #region Public methods
@@ -534,9 +535,9 @@ namespace oradmin
         #endregion
 
         #region IRefreshableObject Members
-        public void Refresh()
+        public bool Refresh()
         {
-            this.Manager.Refresh(this);
+            return this.Manager.Refresh(this);
         }
         #endregion
         #region IUpdatableObject Members

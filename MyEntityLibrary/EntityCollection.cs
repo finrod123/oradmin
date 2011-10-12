@@ -5,8 +5,18 @@ using System.Windows.Data;
 
 namespace oradmin
 {
+    public interface IRevertibleChangeTrackingWithEntitiesContext<TEntity, TData, TKey>
+        where TEntity : IEntityObject<TData,TKey>
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        void AcceptChanges(IEntityCollection<TEntity, TData, TKey> entities);
+        void RejectChanges(IEntityCollection<TEntity, TData, TKey> entities);
+        bool IsChanged(IEntityCollection<TEntity, TData, TKey> entities);
+    }
+
     public interface IEntityCollection<TEntity, TData, TKey>
-        where TEntity : IEntityObject<TData, TKey>
+        where TEntity : class, IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
@@ -16,14 +26,13 @@ namespace oradmin
 
         void AddObject(TEntity entity);
         
-        bool BelongsTo(TEntity entity);
-
         ICollectionView EntityView { get; }
     }
 
     public abstract class EntityCollection<TEntity, TData, TKey> :
-        IEntityCollection<TEntity, TData, TKey>
-        where TEntity : IEntityObject<TData, TKey>
+        IEntityCollection<TEntity, TData, TKey>,
+        IRevertibleChangeTracking
+        where TEntity : class, IEntityObject<TData, TKey>
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     {
@@ -56,10 +65,7 @@ namespace oradmin
 
             this.manager = manager;
             // set up event handling
-            this.setUpExistenceChangeEventHandling();
-            //this.setUpStateChangeEventHandling();
-            //this.setUpDataChangeEventHandling();
-            // set collectionviewsource source collection
+            
             this.viewSource = new CollectionViewSource();
             this.viewSource.Source = this.entities;
         }
@@ -82,7 +88,7 @@ namespace oradmin
         {
             this.manager.AddObject(entity);
         }
-        public abstract bool BelongsTo(TEntity entity);
+        protected abstract bool BelongsTo(TEntity entity);
         public ICollectionView EntityView
         {
             get { return this.viewSource.View; }
@@ -90,35 +96,49 @@ namespace oradmin
         #endregion
 
         #region Helper methods
-        void attachObject(TEntity entity)
+        private void setUpEventHandling()
         {
-            this.entitiesByKey.Add(entity.DataKey, entity);
-            this.entities.Add(entity);
-        }
-        void detachObject(TEntity entity)
-        {
-            this.entitiesByKey.Remove(entity.DataKey);
-            this.entities.Remove(entity);
-        }
-        void setUpStateChangeEventHandling()
-        {
-
+            this.manager.EntityAdded += new EntityExistenceChangedHandler<TKey>(manager_EntityAdded);
         }
 
-
-        void setUpExistenceChangeEventHandling()
+        void manager_EntityAdded(object sender, EntityExistenceChangedEventArgs<TKey> e)
         {
-            
+            TEntity added = e.Entity as TEntity;
         }
+        #endregion
 
-        void setUpDataChangeEventHandling()
+        #region Event handlers helpers
+        private void addEntity(IEntityObjectWithDataKey<TKey> entity)
         {
+            // if the entity does not belong to the collection, ignore it
+            if (!this.BelongsTo(entity))
+                return;
 
+            // add it to the internal data structures
+            this.entitiesByKey.Add(entity.DataKey, ent
         }
         #endregion
 
         #region Event handlers
         
+        #endregion
+
+        #region IRevertibleChangeTracking Members
+        public void RejectChanges()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
+
+        #region IChangeTracking Members
+        public void AcceptChanges()
+        {
+            throw new NotImplementedException();
+        }
+        public bool IsChanged
+        {
+            get { throw new NotImplementedException(); }
+        }
         #endregion
     }
 }

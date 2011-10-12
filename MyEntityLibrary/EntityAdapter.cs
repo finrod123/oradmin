@@ -6,7 +6,7 @@ using System.Text;
 namespace oradmin
 {
     public interface IEntityDataAdapter<TEntity, TData, TKey>
-        where TEntity : EntityObject<TKey>
+        where TEntity : IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
@@ -18,7 +18,7 @@ namespace oradmin
 
     public interface IEntityDataSaver<TManager, TEntity, TData, TKey>
         where TManager : IEntityManager<TEntity, TData, TKey>
-        where TEntity  : EntityObject<TKey>
+        where TEntity  : IEntityObject<TData, TKey>
         where TData    : IEntityDataContainer<TKey>
         where TKey     : IEquatable<TKey>
     {
@@ -29,7 +29,7 @@ namespace oradmin
 
     public abstract class EntityDataAdapter<TEntity, TData, TKey> :
         IEntityDataAdapter<TEntity, TData, TKey>
-        where TEntity : EntityObject<TKey>
+        where TEntity : EntityObject<TData, TKey>
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
     {

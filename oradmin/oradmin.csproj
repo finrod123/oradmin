@@ -102,15 +102,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CustomEntityValidators.cs" />
-    <Compile Include="EntityChangeTracker.cs" />
-    <Compile Include="EntityChangeTrackingPolicies.cs" />
-    <Compile Include="EntityCollection.cs" />
-    <Compile Include="EntityManager.cs" />
-    <Compile Include="EntityStateManager.cs" />
-    <Compile Include="Enums.cs" />
-    <Compile Include="MyValidationAttribute.cs" />
-    <Compile Include="EntityValidator.cs" />
     <Compile Include="ColPrivManager.cs" />
     <Compile Include="ColumnManager.cs" />
     <Compile Include="ConnectDescriptor.cs" />
@@ -127,8 +118,6 @@
     <Compile Include="Converters.cs" />
     <Compile Include="DataManager.cs" />
     <Compile Include="DependencyManager.cs" />
-    <Compile Include="EntityAdapter.cs" />
-    <Compile Include="EntityObject.cs" />
     <Compile Include="EnumConverters.cs" />
     <Compile Include="GrantedColPrivilege.cs" />
     <Compile Include="GrantedSysPrivilege.cs" />
@@ -141,9 +130,7 @@
     <Compile Include="LocalRoleGrantManagers.cs" />
     <Compile Include="LocalSystemPrivilegeManagers.cs" />
     <Compile Include="LocalTablePrivilegeManagers.cs" />
-    <Compile Include="ObjectInterfaces.cs" />
     <Compile Include="ObjectPrivManager.cs" />
-    <Compile Include="ObservableCollection.cs" />
     <Compile Include="PrivilegeBase.cs" />
     <Compile Include="LocalColumnPrivilegeManagers.cs" />
     <Compile Include="PrivManager.cs" />
@@ -193,13 +180,11 @@
     <Compile Include="TableManager.cs" />
     <Compile Include="TopLevelPlSqlUnit.cs" />
     <Compile Include="TriggerManager.cs" />
-    <Compile Include="Tuple.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserManager.cs" />
     <Compile Include="PrivilegeHolderEntity.cs" />
     <Compile Include="UserViewManager.cs" />
     <Compile Include="ValidationInterface.cs" />
-    <Compile Include="VersionedField.cs" />
     <Compile Include="ViewManager.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

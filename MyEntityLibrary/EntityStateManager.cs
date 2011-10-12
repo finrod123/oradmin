@@ -7,23 +7,21 @@ using System.Text;
 namespace oradmin
 {
     public interface IEntityStateManager<TEntity, TData, TKey>
-        where TEntity : EntityObjectBase<TData, TKey>
+        where TEntity : IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
-        void AddTracker(TEntity entity);
+        void AddTracker(TEntity entity, EEntityState initialEntityState);
         void RemoveTracker(TEntity entity);
     }
 
     public abstract class EntityStateManager<TEntity, TData, TKey>:
         IEntityStateManager<TEntity, TData, TKey>
-        where TEntity : EntityObjectBase<TData, TKey>
+        where TEntity : IEntityObject<TData, TKey>
         where TData   : IEntityDataContainer<TKey>
         where TKey    : IEquatable<TKey>
     {
         #region Helper methods
-        protected abstract IEntityChangeTracker CreateTracker(TEntity entity,
-            EEntityState state);
         #endregion
 
         #region IEntityStateManager<TEntity,TData,TKey> Members

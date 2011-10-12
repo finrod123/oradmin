@@ -17,7 +17,7 @@
 
     public interface IRefreshableObject
     {
-        void Refresh();
+        bool Refresh();
     }
 
     public interface IUpdatableObject

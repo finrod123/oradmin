@@ -46,7 +46,7 @@ namespace oradmin
     /// </summary>
     public interface IMyValidationAttribute
     {
-        public Type TargetValidatorType { get; private set; }
+        Type TargetValidatorType { get; }
         string ErrorMessage { get; }
         
         ValidationResult GetValidationResult(object value, ValidationContext context);

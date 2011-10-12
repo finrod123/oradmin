@@ -1,12 +1,14 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Data;
+using System.Collections.Generic;
 
 namespace oradmin
 {
     public interface IInitialReadToVersionedFieldAdapter
     {
-        void ReadData<TData>(VersionedFieldTemplatedBase<TData> field, TData data);
+        void ReadData<TData>(VersionedFieldTemplatedBase<TData> field, TData data)
+            where TData : IEquatable<TData>;
     }
 
     public interface IEditVersionedFieldAdapter
@@ -25,6 +27,7 @@ namespace oradmin
             where TData : IEquatable<TData>;
         bool HasChanges<TData>(VersionedFieldTemplatedBase<TData> field)
             where TData : IEquatable<TData>;
+        bool IsChanged { get; }
     }
 
     public interface IMergeForVersionedFieldAdapter
@@ -39,7 +42,7 @@ namespace oradmin
     public interface IValueGetterForVersionedFieldAdapter<TVersion>
         where TVersion : struct
     {
-        public TData GetValue<TData>(VersionedFieldTemplatedBase<TData> field, TVersion version);
+        TData GetValue<TData>(VersionedFieldTemplatedBase<TData> field, TVersion version);
     }
 
     public interface IValueGetterForVersionedFieldEDataVersionAdapter:
@@ -50,7 +53,7 @@ namespace oradmin
         where TVersion : struct
     {
         // returns whether data was changed (which version?)
-        public bool SetValue<TData>(VersionedFieldTemplatedBase<TData> field,
+        bool SetValue<TData>(VersionedFieldTemplatedBase<TData> field,
             TData data, TVersion version)
             where TData : IEquatable<TData>;
     }
@@ -81,14 +84,14 @@ namespace oradmin
 
     public interface IDefaultVersionValueGetterForVersionedFieldAdapter
     {
-        public TData GetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field);
+        TData GetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field);
     }
 
     public interface IDefaultVersionValueSetterForVersionedFieldAdapter
     {
         // sets the default value of the field and returns whether it has changed
         // (returns which data versions were changed?)
-        public bool SetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field,
+        bool SetDefaultValue<TData>(VersionedFieldTemplatedBase<TData> field,
             TData value)
             where TData : IEquatable<TData>;
     }
@@ -122,6 +125,7 @@ namespace oradmin
 
         #region IVersionedFieldInitialReadPolicyObject Members
         public void ReadData<TData>(VersionedFieldTemplatedBase<TData> field, TData data)
+            where TData : IEquatable<TData>
         {
             switch (this.info.EntityState)
             {
@@ -136,7 +140,6 @@ namespace oradmin
                     throw new InvalidOperationException(
                         string.Format("Cannot read data in state {0}",
                         this.info.EntityState.ToString()));
-                    break;
             }
         }
         #endregion
@@ -173,12 +176,15 @@ namespace oradmin
     {
         #region Members
         IEntityStateInfo info;
+        Dictionary<string, VersionedFieldBase> versionedFields;
+        int fieldsWithChangesCount;
         IValueGetterSetterForVersionedFieldEDataVersionAdapter fieldGetterSetter;
         #endregion
 
         #region Constructor
         public VersionChangesForVersionedFieldAdapter(
             IEntityChangeTrackerStateInfo info,
+            IDictionary<string, VersionedFieldBase> versionedFields,
             IValueGetterSetterForVersionedFieldEDataVersionAdapter fieldGetterSetter
             )
         {
@@ -188,6 +194,8 @@ namespace oradmin
                 throw new ArgumentNullException("field getter and setter");
 
             this.info = info;
+            this.versionedFields = new Dictionary<string, VersionedFieldBase>(versionedFields);
+            this.fieldsWithChangesCount = 0;
             this.fieldGetterSetter = fieldGetterSetter;
         }
         #endregion
@@ -230,9 +238,10 @@ namespace oradmin
         public bool HasChanges<TData>(VersionedFieldTemplatedBase<TData> field)
             where TData : IEquatable<TData>
         {
-            return !this.fieldGetterSetter.GetValue<TData>(field, EDataVersion.Current)
-                   .Equals(
-                   this.fieldGetterSetter.GetValue<TData>(field, EDataVersion.Original));
+            return
+                !this.fieldGetterSetter.GetValue<TData>(field, EDataVersion.Current)
+                    .Equals(
+                 this.fieldGetterSetter.GetValue<TData>(field, EDataVersion.Original));
         }
         #endregion
     }
@@ -300,7 +309,7 @@ namespace oradmin
     public class ValueGetterSetterWithDefaultVersionForVersionedFieldEDataVersionAdapter :
         IValueGetterSetterForVersionedFieldEDataVersionAdapter,
         IDefaultVersionValueGetterSetterForVersionedFieldAdapter,
-        IDefaultVersionGetterForVersionedFieldEDataVersionAdapter,
+        IDefaultVersionGetterForVersionedFieldEDataVersionAdapter
     {
         #region Members
         IEntityChangeTrackerStateInfo info;

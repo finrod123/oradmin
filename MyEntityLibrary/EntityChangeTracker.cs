@@ -59,7 +59,8 @@ namespace oradmin
     {
         IEntityObjectWithDataKey<TKey> Entity { get; }
         void EntityMemberChanging(string member);
-        void EntityMemberChanged<TData>(string member, TData value);
+        void EntityMemberChanged<T>(string member, T value)
+            where T : IEquatable<T>;
     }
     
     public interface IChangeTrackerForEntityObject<TData, TKey> :
@@ -88,13 +89,13 @@ namespace oradmin
 
     public interface IGetterEDataVersionByFieldName
     {
-        public TData GetOriginalFieldValue<TData>(string fieldName);
-        public TData GetCurrentFieldValue<TData>(string fieldName);
+        TData GetOriginalFieldValue<TData>(string fieldName);
+        TData GetCurrentFieldValue<TData>(string fieldName);
     }
 
     public interface IDefaultVersionGetterByFieldName
     {
-        public TData GetDefaultValue<TData>(string fieldName);
+        TData GetDefaultValue<TData>(string fieldName);
     }
     
     /// <summary>
@@ -193,28 +194,28 @@ namespace oradmin
             this.fieldMerger = new MergeForVersionedFieldAdapter(
                 this, this.fieldGetterSetter);
         }
-        private TData getFieldValue<TData>(string fieldName, EDataVersion version)
+        private T getFieldValue<T>(string fieldName, EDataVersion version)
         {
             return this.fieldGetterSetter.GetValue(
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>,
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<T>,
                 version);
         }
-        private bool setFieldValue<TData>(string fieldName, TData data, EDataVersion version)
-            where TData : IEquatable<TData>
+        private bool setFieldValue<T>(string fieldName, T data, EDataVersion version)
+            where T : IEquatable<T>
         {
             // load a field
-            VersionedFieldTemplatedBase<TData> field =
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>;
+            VersionedFieldTemplatedBase<T> field =
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<T>;
             // load current changes state
-            bool oldHasChanges = this.fieldVersionChanger.HasChanges<TData>(field);
+            bool oldHasChanges = this.fieldVersionChanger.HasChanges<T>(field);
             // set the new value
-            bool fieldCurrentDataChanged = this.fieldGetterSetter.SetValue<TData>(
+            bool fieldCurrentDataChanged = this.fieldGetterSetter.SetValue<T>(
                             field,
                             data,
                             version);
 
             // detect the HasChanges change
-            if (oldHasChanges != this.fieldVersionChanger.HasChanges<TData>(field))
+            if (oldHasChanges != this.fieldVersionChanger.HasChanges<T>(field))
             {
                 // based on whether the changes emerged or ceased to exist,
                 // increase, or decrease the changed field count
@@ -240,10 +241,10 @@ namespace oradmin
 
             return fieldCurrentDataChanged;
         }
-        private bool setFieldDefaultValue<TData>(string fieldName, TData data)
-            where TData : IEquatable<TData>
+        private bool setFieldDefaultValue<T>(string fieldName, T data)
+            where T : IEquatable<T>
         {
-            return this.setFieldValue<TData>(
+            return this.setFieldValue<T>(
                 fieldName,
                 data,
                 this.fieldGetterSetter.GetDefaultVersion());
@@ -251,21 +252,18 @@ namespace oradmin
         #endregion
 
         #region Public interface
-        public TData GetDefaultValue<TData>(string fieldName)
-            where TData : class
+        public T GetDefaultValue<T>(string fieldName)
         {
             return this.fieldGetterSetter.GetDefaultValue(
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<TData>);
+                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<T>);
         }
-        public TData GetOriginalFieldValue<TData>(string fieldName)
-            where TData : class
+        public T GetOriginalFieldValue<T>(string fieldName)
         {
-            return this.getFieldValue<TData>(fieldName, EDataVersion.Original);
+            return this.getFieldValue<T>(fieldName, EDataVersion.Original);
         }
-        public TData GetCurrentFieldValue<TData>(string fieldName)
-            where TData : class
+        public T GetCurrentFieldValue<T>(string fieldName)
         {
-            return this.getFieldValue<TData>(fieldName, EDataVersion.Current);
+            return this.getFieldValue<T>(fieldName, EDataVersion.Current);
         }
         #endregion
 
@@ -282,8 +280,8 @@ namespace oradmin
             }
         }
         public void EntityMemberChanging(string member) { }
-        public void EntityMemberChanged<TData>(string member, TData value)
-            where TData : IEquatable<TData>
+        public void EntityMemberChanged<T>(string member, T value)
+            where T : IEquatable<T>
         {
             // remember the old state
             EEntityState oldState = this.entityState;

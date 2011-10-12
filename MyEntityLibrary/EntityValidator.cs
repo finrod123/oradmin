@@ -78,9 +78,9 @@ namespace oradmin
         #region Static methods
         protected static void Initialize(
             Type validatorType,
-            out ValidatorsEnumeration crossEntityValidators,
-            out ValidatorsEnumeration entityValidators,
-            out ValidatorsEnumeration crossPropertyValidators,
+            out CrossEntityValidatorsEnumeration crossEntityValidators,
+            out EntityValidatorsEnumeration entityValidators,
+            out CrossPropertyValidatorsEnumeration crossPropertyValidators,
             out PropertyValidatorsEnumerations propertyValidators,
             out List<string> propertyNames)
         {
@@ -163,10 +163,8 @@ namespace oradmin
         #endregion
 
         #region Error detection members
-        private bool hasEntityErrors;
         private PropertyErrorIndicators propertyErrorsIndicators =
             new PropertyErrorIndicators();
-        private int propertyErrorsCount;
         #endregion
 
         #region Entity and property Validators
@@ -239,7 +237,6 @@ namespace oradmin
         public void ValidateEntity()
         {
             // validate properties
-            clearPropertyErrors();
             foreach (KeyValuePair<string, object> pair in propertyValues)
             {
                 ValidateProperty(pair.Key, pair.Value);
@@ -251,7 +248,6 @@ namespace oradmin
                 return;
 
             // clear errors
-            clearEntityOnlyErrors();
             validationContext.MemberName = string.Empty;
 
             foreach (IMyValidationAttribute validator in entityValidators)
@@ -263,8 +259,8 @@ namespace oradmin
                 if (result != ValidationResult.Success)
                 {
                     HasErrors = true;
-                    entityErrors.Add(result.ErrorMessage);
-                    addPropertyErrorsToProperties(result.ErrorMessage, result.MemberNames);
+                    //entityErrors.Add(result.ErrorMessage);
+                    //addPropertyErrorsToProperties(result.ErrorMessage, result.MemberNames);
                 }
             }
         }
@@ -272,7 +268,7 @@ namespace oradmin
         {
             validationContext.MemberName = propertyName;
 
-            foreach (IMyValidationAttribute validator in this.propertyValidators[propertyName])
+            foreach (IMyValidationPropertyAttribute validator in this.propertyValidators[propertyName])
             {
                 ValidationResult result = validator.GetValidationResult(
                     value, validationContext);
@@ -288,7 +284,7 @@ namespace oradmin
 
         #region Helper methods
         private void addValidatorErrorToProperties(
-            IMyValidationAttribute validator,
+            IMyValidationPropertyAttribute validator,
             ValidationResult badResult)
         {
             // get validation result data
@@ -298,7 +294,7 @@ namespace oradmin
             // walk all bad properties and add the error message to their errors
             foreach (string propertyName in badPropertiesNames)
             {
-                ValidatorsErrorMessages propertyErrorsMessages =
+                PropertyValidatorsErrorMessages propertyErrorsMessages =
                     this.propertiesErrors[propertyName];
 
                 // add error information to property errors dictionary
@@ -324,16 +320,16 @@ namespace oradmin
 
         private void clearValidatorErrorFromProperties(IMyValidationAttribute validator)
         {
-            foreach (string possiblyAffectedMember in validator.MemberNames)
-            {
-                ValidatorsErrorMessages propertyErrorMessages =
-                    this.propertiesErrors[possiblyAffectedMember];
-                // remove validator error from property validator error set
-                propertyErrorMessages.Remove(validator);
-                // check for remaining property errors
-                this.propertyErrorsIndicators[possiblyAffectedMember] =
-                    propertyErrorMessages.Count > 0;
-            }
+            //foreach (string possiblyAffectedMember in validator.MemberNames)
+            //{
+            //    ValidatorsErrorMessages propertyErrorMessages =
+            //        this.propertiesErrors[possiblyAffectedMember];
+            //    // remove validator error from property validator error set
+            //    propertyErrorMessages.Remove(validator);
+            //    // check for remaining property errors
+            //    this.propertyErrorsIndicators[possiblyAffectedMember] =
+            //        propertyErrorMessages.Count > 0;
+            //}
         }
         void entity_PropertyChangedPassingValue(object sender, PropertyChangedPassingValueEventArgs e)
         {
@@ -351,7 +347,7 @@ namespace oradmin
                 this.propertyErrorsIndicators.Add(propertyName, false);
                 this.propertiesErrors.Add(
                     propertyName,
-                    new Dictionary<IMyValidationAttribute, string>());
+                    new Dictionary<IMyValidationPropertyAttribute, string>());
             }
         }
         /// <summary>

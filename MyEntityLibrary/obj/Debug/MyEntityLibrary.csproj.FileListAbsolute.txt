@@ -1,0 +1,5 @@
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\MyEntityLibrary\obj\Debug\ResolveAssemblyReference.cache
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\MyEntityLibrary\bin\Debug\MyEntityLibrary.dll
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\MyEntityLibrary\bin\Debug\MyEntityLibrary.pdb
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\MyEntityLibrary\obj\Debug\MyEntityLibrary.dll
+C:\Documents and Settings\Tom\Dokumenty\Visual Studio 2008\Projects\oradmin\MyEntityLibrary\obj\Debug\MyEntityLibrary.pdb

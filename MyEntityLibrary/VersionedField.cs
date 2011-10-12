@@ -8,7 +8,7 @@ using System.Data;
 namespace oradmin
 {
     public interface IVersionedFieldVersionQueryable<TVersion>
-        where TVersion : IEquatable<TVersion>
+        where TVersion : struct
     {
         bool HasVersion(TVersion version);
     }
@@ -34,7 +34,7 @@ namespace oradmin
     
     public interface IVersionedField<TVersion, TData> :
         IVersionedFieldVersionQueryable<TVersion>,
-        IValueGetterForVersionedFieldAdapter<TVersion>
+        IVersionedFieldQueryableModifiable<TVersion, TData>
         where TVersion : struct
     { }
 
@@ -53,7 +53,7 @@ namespace oradmin
 
     public abstract class VersionedFieldTemplatedBase<TData> :
         VersionedFieldBase,
-        IVersionedFieldQueryableModifiable<EDataVersion, TData>
+        IVersionedField<EDataVersion, TData>
     {
         #region IVersionedField<EDataVersion,TData> Members
         public abstract TData GetValue(EDataVersion version);
@@ -61,9 +61,8 @@ namespace oradmin
         #endregion
     }
 
-    public abstract class VersionedFieldReferenceType<TData> :
+    public abstract class VersionedFieldGetBase<TData> :
         VersionedFieldTemplatedBase<TData>
-        where TData : class
     {
         #region Members
         protected TData original,
@@ -82,6 +81,8 @@ namespace oradmin
                     return this.original;
                 case EDataVersion.Current:
                     return this.current;
+                default:
+                    return default(TData);
             }
         }
         public override bool HasVersion(EDataVersion version)
@@ -93,10 +94,12 @@ namespace oradmin
                 case EDataVersion.Current:
                     return this.current != null;
             }
+
+            return false;
         }
     }
 
-    public class VersionedFieldClonable<TData> : VersionedFieldReferenceType<TData>
+    public class VersionedFieldClonable<TData> : VersionedFieldGetBase<TData>
         where TData : class, ICloneable
     {
         #region Constructor
@@ -134,7 +137,7 @@ namespace oradmin
     }
 
     public class VersionedFieldNullableValueType<TData> :
-        VersionedFieldReferenceType<Nullable<TData>>
+        VersionedFieldGetBase<Nullable<TData>>
         where TData : struct
     {
         #region Constructor
@@ -198,6 +201,8 @@ namespace oradmin
                     return this.original.Value;
                 case EDataVersion.Current:
                     return this.current.Value;
+                default:
+                    return default(TData);
             }
         }
         public override void SetValue(TData data, EDataVersion version)
@@ -221,19 +226,8 @@ namespace oradmin
                 case EDataVersion.Current:
                     return this.current.HasValue;
             }
+
+            return false;
         }
-    }
-
-    public enum EDataVersionWithDefault
-    {
-        Original,
-        Current,
-        Default
-    }
-
-    public enum EDataVersion
-    {
-        Original,
-        Current
     }
 }
