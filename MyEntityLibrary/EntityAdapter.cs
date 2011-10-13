@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace oradmin
+namespace myentitylibrary
 {
     public interface IEntityDataAdapter<TEntity, TData, TKey>
         where TEntity : IEntityObject<TData, TKey>
@@ -16,15 +16,15 @@ namespace oradmin
         bool GetChanges(out IEnumerable<TData> data);
     }
 
-    public interface IEntityDataSaver<TManager, TEntity, TData, TKey>
-        where TManager : IEntityManager<TEntity, TData, TKey>
+    public interface IEntityDataSaver<TEntityCollection, TEntity, TData, TKey>
+        where TEntityCollection : IEntityCollection<TEntity, TData, TKey>
         where TEntity  : IEntityObject<TData, TKey>
         where TData    : IEntityDataContainer<TKey>
         where TKey     : IEquatable<TKey>
     {
-        void Update(TManager entityManager);
-        void Update(IEnumerable<TEntity> entities);
-        void Update(TEntity entity);
+        void SaveChanges(TEntityCollection entities);
+        void SaveChanges(IEnumerable<TEntity> entities);
+        void SaveChanges(TEntity entity);
     }
 
     public abstract class EntityDataAdapter<TEntity, TData, TKey> :

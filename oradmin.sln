@@ -10,6 +10,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyEntityLibrary", "MyEntityLibrary\MyEntityLibrary.csproj", "{1CF90D70-1BC2-4C0B-A49C-6DEA3BEB14FA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OradminBusinessLogicLayer", "OradminBusinessLogicLayer\OradminBusinessLogicLayer.csproj", "{AFFABB27-BD8A-49B5-B966-3BC71CE410F6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1CF90D70-1BC2-4C0B-A49C-6DEA3BEB14FA} = {1CF90D70-1BC2-4C0B-A49C-6DEA3BEB14FA}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OradminViewModel", "OradminViewModel\OradminViewModel.csproj", "{252EC705-8D9B-44BE-BA2E-A7D87F5718C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +31,14 @@ Global
 		{1CF90D70-1BC2-4C0B-A49C-6DEA3BEB14FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1CF90D70-1BC2-4C0B-A49C-6DEA3BEB14FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1CF90D70-1BC2-4C0B-A49C-6DEA3BEB14FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFFABB27-BD8A-49B5-B966-3BC71CE410F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFFABB27-BD8A-49B5-B966-3BC71CE410F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFFABB27-BD8A-49B5-B966-3BC71CE410F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFFABB27-BD8A-49B5-B966-3BC71CE410F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{252EC705-8D9B-44BE-BA2E-A7D87F5718C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{252EC705-8D9B-44BE-BA2E-A7D87F5718C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{252EC705-8D9B-44BE-BA2E-A7D87F5718C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{252EC705-8D9B-44BE-BA2E-A7D87F5718C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

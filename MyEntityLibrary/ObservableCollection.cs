@@ -4,9 +4,9 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 
-namespace oradmin
+namespace myentitylibrary
 {
-    class ObservableCollection<T> : System.Collections.ObjectModel.ObservableCollection<T>
+    public class ObservableCollection<T> : System.Collections.ObjectModel.ObservableCollection<T>
     {
         public ObservableCollection() : base() { }
         // add range method

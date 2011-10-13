@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
-namespace oradmin
+namespace myentitylibrary
 {
     public enum EValidationLevel
     {

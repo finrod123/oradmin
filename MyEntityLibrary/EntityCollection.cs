@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Windows.Data;
 
-namespace oradmin
+namespace myentitylibrary
 {
     public interface IRevertibleChangeTrackingWithEntitiesContext<TEntity, TData, TKey>
         where TEntity : IEntityObject<TData,TKey>

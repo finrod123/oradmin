@@ -1,4 +1,4 @@
-﻿namespace oradmin
+﻿namespace myentitylibrary
 {
     public interface IDeletableObject
     {

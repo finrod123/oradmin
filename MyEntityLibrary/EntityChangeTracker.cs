@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Collections.Specialized;
 
-namespace oradmin
+namespace myentitylibrary
 {
     #region Delegates, Event Args and Interfaces for DataChanged and StateChanged tracker events
     public class TrackerDataChangedEventArgs : EventArgs
@@ -135,7 +135,7 @@ namespace oradmin
         /// <summary>
         /// The dictionary of versioned fields.
         /// </summary>
-        protected Dictionary<string, VersionedFieldBase> versionedFields;
+        protected Dictionary<string, IVersionedFieldBase> versionedFields;
 
         #region Field adapters
         /// <summary>
@@ -197,15 +197,15 @@ namespace oradmin
         private T getFieldValue<T>(string fieldName, EDataVersion version)
         {
             return this.fieldGetterSetter.GetValue(
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<T>,
+                this.versionedFields[fieldName] as IVersionedFieldTemplatedBase<T>,
                 version);
         }
         private bool setFieldValue<T>(string fieldName, T data, EDataVersion version)
             where T : IEquatable<T>
         {
             // load a field
-            VersionedFieldTemplatedBase<T> field =
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<T>;
+            IVersionedFieldTemplatedBase<T> field =
+                this.versionedFields[fieldName] as IVersionedFieldTemplatedBase<T>;
             // load current changes state
             bool oldHasChanges = this.fieldVersionChanger.HasChanges<T>(field);
             // set the new value
@@ -255,7 +255,7 @@ namespace oradmin
         public T GetDefaultValue<T>(string fieldName)
         {
             return this.fieldGetterSetter.GetDefaultValue(
-                this.versionedFields[fieldName] as VersionedFieldTemplatedBase<T>);
+                this.versionedFields[fieldName] as IVersionedFieldTemplatedBase<T>);
         }
         public T GetOriginalFieldValue<T>(string fieldName)
         {

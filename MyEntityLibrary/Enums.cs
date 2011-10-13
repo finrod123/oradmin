@@ -1,4 +1,4 @@
-﻿namespace oradmin
+﻿namespace myentitylibrary
 {
     public enum EEntityState
     {
@@ -11,14 +11,14 @@
 
     public enum EDataVersionWithDefault
     {
-        Original,
-        Current,
-        Default
+        Original = 1,
+        Current = 2,
+        Default = 4
     }
 
     public enum EDataVersion
     {
-        Original,
-        Current
+        Original = 1,
+        Current = 2
     }
 }

@@ -5,7 +5,7 @@ using System.Text;
 using System.ComponentModel;
 using System.Windows.Data;
 
-namespace oradmin
+namespace myentitylibrary
 {
     #region Delegates for entity changes notification
 	
@@ -514,9 +514,10 @@ namespace oradmin
     /// <typeparam name="TEntity">Type of the entity managed</typeparam>
     /// <typeparam name="TData">Entity data container type</typeparam>
     /// <typeparam name="TKey">Data key type</typeparam>
-    public abstract class EntityManager<TEntity, TData, TKey> :
+    public abstract class EntityManager<TEntityCollection, TEntity, TData, TKey> :
         IEntityManager<TEntity, TData, TKey>,
         IRevertibleChangeTracking
+        where TEntityCollection : IEntityCollection<TEntity, TData, TKey>
         where TEntity : IEntityObject<TData, TKey>
         where TData : IEntityDataContainer<TKey>
         where TKey : IEquatable<TKey>
@@ -526,6 +527,7 @@ namespace oradmin
         protected Dictionary<TKey, TEntity> entitiesByKey =
             new Dictionary<TKey, TEntity>();
         protected IEntityDataAdapter<TEntity, TData, TKey> dataAdapter;
+        protected IEntityDataSaver<TEntityCollection, TEntity, TData, TKey> dataSaver;
         protected IEntityCollection<TEntity, TData, TKey> entityCollection;
         #endregion
 
@@ -535,13 +537,18 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        protected EntityManager(IEntityDataAdapter<TEntity, TData, TKey> dataAdapter)
+        protected EntityManager(
+            IEntityDataAdapter<TEntity, TData, TKey> dataAdapter,
+            IEntityDataSaver<TEntityCollection, TEntity, TData, TKey> dataSaver)
         {
             if (dataAdapter == null)
-                throw new ArgumentNullException("dataAdapter");
+                throw new ArgumentNullException("data adapter");
+            if (dataSaver == null)
+                throw new ArgumentNullException("data saver");
 
-            // store the reference to the entity data adapter
+            // store the reference to the entity data adapter and data saver
             this.dataAdapter = dataAdapter;
+            this.dataSaver = dataSaver;
             // create the entity state manager
             this.createEntityStateManager();
             // create the default entity collection

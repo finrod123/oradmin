@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 
-namespace oradmin
+namespace myentitylibrary
 {
     public interface IEntityStateManager<TEntity, TData, TKey>
         where TEntity : IEntityObject<TData, TKey>

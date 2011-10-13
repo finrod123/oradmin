@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
-namespace oradmin
+namespace myentitylibrary
 {
     #region Using directives
 
@@ -23,9 +23,12 @@ namespace oradmin
     #region Validation attributes error holders
     using ValidatorsErrorMessages = Dictionary<IMyValidationAttribute, string>;
     using PropertyValidatorsErrorMessages = Dictionary<IMyValidationPropertyAttribute, string>;
-    using PropertiesValidatorsErrorMessages =
+    using PropertiesCrossPropertyValidatorsErrorMessages =
+        Dictionary<string, Dictionary<IMyValidationCrossPropertyAttribute, string>>;
+    using PropertiesPropertyValidatorsErrorMessages =
         Dictionary<string, Dictionary<IMyValidationPropertyAttribute, string>>;
     
+
     using CrossPropertyValidatorsErrorMessages =
         Dictionary<IMyValidationCrossPropertyAttribute, string>;
     using EntityValidatorsErrorMessages = Dictionary<IMyValidationEntityAttribute, string>;
@@ -163,8 +166,17 @@ namespace oradmin
         #endregion
 
         #region Error detection members
-        private PropertyErrorIndicators propertyErrorsIndicators =
+        private PropertyErrorIndicators propertyFieldErrorsIndicators =
             new PropertyErrorIndicators();
+        private PropertyErrorIndicators propertyCrossFieldErrorIndicators =
+            new PropertyErrorIndicators();
+
+        bool hasCrossEntityErrors,
+             hasEntityErrors,
+             hasCrossPropertyErrors,
+             hasPropertyErrors;
+
+        int propertiesWithFieldErrorCount = 0;
         #endregion
 
         #region Entity and property Validators
@@ -183,8 +195,10 @@ namespace oradmin
             new CrossPropertyValidatorsErrorMessages();
 
         // TODO: nutno inicializovat
-        protected PropertiesValidatorsErrorMessages propertiesErrors =
-            new PropertiesValidatorsErrorMessages();
+        protected PropertiesPropertyValidatorsErrorMessages propertiesFieldErrors =
+            new PropertiesPropertyValidatorsErrorMessages();
+        protected PropertiesCrossPropertyValidatorsErrorMessages propertiesCrossFieldErrors =
+            new PropertiesCrossPropertyValidatorsErrorMessages();
         #endregion
 
         #region Constructors
@@ -236,37 +250,46 @@ namespace oradmin
         #region IEntityValidator Members
         public void ValidateEntity()
         {
-            // validate properties
-            foreach (KeyValuePair<string, object> pair in propertyValues)
-            {
-                ValidateProperty(pair.Key, pair.Value);
-            }
+            // validates properties and removes the dependent validators' errors
+            this.validateProperties();
 
             // if there are no errors, proceed to entity validation
-
-            if (HasErrors)
+            if (this.HasErrors)
                 return;
 
-            // clear errors
+            // unset the member name
             validationContext.MemberName = string.Empty;
+            
+            // run cross-property validation and remove the dependent (entity-level)
+            // validators' errors
+            this.runCrossPropertyLevelValidation();
 
-            foreach (IMyValidationAttribute validator in entityValidators)
-            {
-                ValidationResult result =
-                    validator.GetValidationResult(null, validationContext);
+            // if there are errors, return
+            if (this.HasErrors)
+                return;
 
-                // error occured -> 
-                if (result != ValidationResult.Success)
-                {
-                    HasErrors = true;
-                    //entityErrors.Add(result.ErrorMessage);
-                    //addPropertyErrorsToProperties(result.ErrorMessage, result.MemberNames);
-                }
-            }
+            // run entity-level validation
+            this.runEntityLevelValidation();
+
+            // if there are errors, return
+            if (this.HasErrors)
+                return;
+
+            // run cross-entity-level validation
+            this.runCrossEntityLevelValidation();
+
+            // determine the final HasErrors value
+
         }
         public void ValidateProperty(string propertyName, object value)
         {
+            // set a member name to a validation context
             validationContext.MemberName = propertyName;
+
+            // remove errors
+            this.removePropertyErrors(propertyName);
+
+            bool hasPropertyLevelErrors;
 
             foreach (IMyValidationPropertyAttribute validator in this.propertyValidators[propertyName])
             {
@@ -275,27 +298,155 @@ namespace oradmin
 
                 if (result != ValidationResult.Success)
                 {
-                    this.addValidatorErrorToProperties(validator, result);
-                    HasErrors = true;
+                    this.addPropertyValidatorError(propertyName, validator, result);
+                    hasPropertyLevelErrors = true;
                 }
+            }
+
+            // check for property-level on a property
+            this.propertyFieldErrorsIndicators[propertyName] = hasPropertyLevelErrors;
+
+            // if it has no errors, call the higher level to try validating
+            if (!hasPropertyLevelErrors)
+            {
+                this.runCrossPropertyValidatorsWhenPropertyBecomesValid(propertyName);
             }
         }
         #endregion
 
         #region Helper methods
-        private void addValidatorErrorToProperties(
+        private void runCrossEntityLevelValidation()
+        {
+
+        }
+        private void runEntityLevelValidation()
+        {
+
+        }
+        private void runCrossPropertyLevelValidation()
+        {
+
+        }
+        private void validateProperties()
+        {
+            // remove all validation errors including the higher layer
+        }
+        private void validatePropertyHelper(string propertyName)
+        {
+
+        }
+        private void runCrossPropertyValidatorsWhenPropertyBecomesValid(
+            string propertyName)
+        {
+
+        }
+
+        private void reEvaluatePropertyFieldErrorIndicator(string propertyName)
+        {
+            bool oldHasFieldErrors = this.propertyFieldErrorsIndicators[propertyName],
+                 newHasFieldErrors = this.propertiesFieldErrors[propertyName].Count > 0;
+
+            // if the error state changed, decide whether to increase or decrease
+            // erroneous fields count
+            if (oldHasFieldErrors != newHasFieldErrors)
+            {
+                if (newHasFieldErrors)
+                    ++this.propertiesWithFieldErrorCount;
+                else
+                    --this.propertiesWithFieldErrorCount;
+            }
+
+            // set the new error indicator value
+            this.propertyFieldErrorsIndicators[propertyName] = newHasFieldErrors;
+        }
+
+        private void removePropertyErrors(string propertyName)
+        {
+            // remove errors on this level
+            this.removePropertyFieldErrors(propertyName);
+            // invalidate higher level dependent (cross-property) validators
+            this.removePropertyCrossFieldErrors(propertyName);
+        }
+        private void removePropertyFieldErrors(string propertyName)
+        {
+            // clear property errors from a dictionary
+            foreach (string field in this.propertiesFieldErrors.Keys)
+            {
+                this.propertiesFieldErrors[field].Clear();
+            }
+            // set field-level error indicator for the property
+            this.reEvaluatePropertyFieldErrorIndicator(propertyName);
+        }
+        private void removePropertyCrossFieldErrors(string propertyName)
+        {
+            // remove dependent entity errors
+            this.removeEntityErrors();
+
+            // remove cross-property level validators for propertyName
+            IEnumerable<IMyValidationCrossPropertyAttribute> validators =
+                this.propertiesCrossFieldErrors[propertyName].Keys;
+
+            // remove cross-field level validators from all properties and
+            // set error indicators for the properties
+            foreach (IMyValidationCrossPropertyAttribute validator in validators)
+            {
+                removeCrossFieldError(validator);
+            }
+
+            // set hasCrossFieldErrors error indicator accordingly
+            this.hasCrossPropertyErrors = this.crossPropertyErrors.Count > 0;
+        }
+        private void removeCrossFieldError(IMyValidationCrossPropertyAttribute validator)
+        {
+            // remove the validator from the cross-property validators dictionary
+            this.crossPropertyErrors.Remove(validator);
+
+            // remove the validator from all properties
+            foreach (string propertyName in validator.MemberNames)
+            {
+                this.removeCrossFieldErrorFromProperty(validator, propertyName);
+            }
+        }
+        private void removeCrossFieldErrorFromProperty(
+            IMyValidationCrossPropertyAttribute validator,
+            string propertyName)
+        {
+            Dictionary<IMyValidationCrossPropertyAttribute, string> crossFieldErrors =
+                this.propertiesCrossFieldErrors[propertyName];
+            // remove the validator from cross-field level property dictionary
+            crossFieldErrors.Remove(validator);
+            // set error indicator for cross-property level errors for the property
+            this.reEvaluatePropertyFieldErrorIndicator(propertyName);
+        }
+        private void removeEntityErrors()
+        {
+            // remove cross-entity errors
+            this.removeCrossEntityErrors();
+            // remove entity errors
+            this.entityErrors.Clear();
+            // set hasEntityErrors accordingly
+            this.hasEntityErrors = false;
+        }
+        private void removeCrossEntityErrors()
+        {
+            // remove cross-entity errors
+            this.crossEntityErrors.Clear();
+            // set hasCrossEntityErrors accordingly
+            this.hasCrossEntityErrors = false;
+        }
+
+        private void addPropertyValidatorError(
+            string propertyName,
             IMyValidationPropertyAttribute validator,
             ValidationResult badResult)
         {
-            // get validation result data
-            IEnumerable<string> badPropertiesNames = badResult.MemberNames;
             string errorMessage = badResult.ErrorMessage;
 
             // walk all bad properties and add the error message to their errors
             foreach (string propertyName in badPropertiesNames)
             {
                 PropertyValidatorsErrorMessages propertyErrorsMessages =
-                    this.propertiesErrors[propertyName];
+                    this.propertiesFieldErrors[propertyName];
 
                 // add error information to property errors dictionary
                 if (!propertyErrorsMessages.ContainsKey(validator))
@@ -304,18 +455,18 @@ namespace oradmin
                     propertyErrorsMessages[validator] = errorMessage;
 
                 // set error indicator for the affected bad property member to true
-                this.propertyErrorsIndicators[propertyName] = true;
+                this.propertyFieldErrorsIndicators[propertyName] = true;
             }
         }
         private void clearPropertyValidationError(string propertyName,
             IMyValidationPropertyAttribute validator)
         {
             PropertyValidatorsErrorMessages propertyErrors =
-                this.propertiesErrors[propertyName];
+                this.propertiesFieldErrors[propertyName];
             // remove validation error
             propertyErrors.Remove(validator);
             // check for property errors left
-            this.propertyErrorsIndicators[propertyName] = propertyErrors.Count > 0;
+            this.propertyFieldErrorsIndicators[propertyName] = propertyErrors.Count > 0;
         }
 
         private void clearValidatorErrorFromProperties(IMyValidationAttribute validator)
@@ -344,8 +495,8 @@ namespace oradmin
         {
             foreach (string propertyName in propertyNames)
             {
-                this.propertyErrorsIndicators.Add(propertyName, false);
-                this.propertiesErrors.Add(
+                this.propertyFieldErrorsIndicators.Add(propertyName, false);
+                this.propertiesFieldErrors.Add(
                     propertyName,
                     new Dictionary<IMyValidationPropertyAttribute, string>());
             }

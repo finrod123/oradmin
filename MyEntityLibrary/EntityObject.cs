@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Collections.Specialized;
 
-namespace oradmin
+namespace myentitylibrary
 {
     
     #region PropertyChangedPassingValue members\
@@ -369,7 +369,8 @@ namespace oradmin
             // entity is not detached -> it has a change tracker
             bool currentDataChanged = this.changeTracker.Merge(data, mergeOptions);
             // when not editing, read current data into the entity cache, if not deleted
-            if (this.EntityState != EEntityState.Deleted)
+            if (!this.IsEditing &&
+                this.EntityState != EEntityState.Deleted)
                 this.readCurrentData(data);
 
             return currentDataChanged;

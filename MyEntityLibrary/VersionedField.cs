@@ -5,7 +5,7 @@ using System.Text;
 using System.ComponentModel;
 using System.Data;
 
-namespace oradmin
+namespace myentitylibrary
 {
     public interface IVersionedFieldVersionQueryable<TVersion>
         where TVersion : struct
@@ -38,38 +38,85 @@ namespace oradmin
         where TVersion : struct
     { }
 
-    public abstract class VersionedFieldBase :
+    public interface IVersionedFieldBase :
         IVersionedFieldVersionQueryable<EDataVersion>,
         IEditableObjectInfo
     {
         #region Properties
-        public bool IsEditing { get; private set; }
+        string Name { get; }
+        bool IsEditing { get; private set; }
         #endregion
 
         #region IVersionedFieldBase<EDataVersion> Members
-        public abstract bool HasVersion(EDataVersion version);
+        bool HasVersion(EDataVersion version);
         #endregion
     }
 
-    public abstract class VersionedFieldTemplatedBase<TData> :
-        VersionedFieldBase,
+    public interface IVersionedFieldTemplatedBase<TData> :
+        IVersionedFieldBase,
         IVersionedField<EDataVersion, TData>
     {
         #region IVersionedField<EDataVersion,TData> Members
-        public abstract TData GetValue(EDataVersion version);
-        public abstract void SetValue(TData data, EDataVersion version);
+        TData GetValue(EDataVersion version);
+        void SetValue(TData data, EDataVersion version);
         #endregion
     }
 
-    public abstract class VersionedFieldGetBase<TData> :
-        VersionedFieldTemplatedBase<TData>
+    public abstract class VersionedFieldBase<TData> :
+        IVersionedFieldTemplatedBase<TData>
     {
         #region Members
+        protected string name;
         protected TData original,
                         current;
         #endregion
 
-        public override TData GetValue(EDataVersion version)
+        #region Constructor
+        public VersionedFieldBase(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentNullException("name");
+
+            this.Name = name;
+        }
+        #endregion
+
+        public abstract bool HasVersion(EDataVersion version);
+        public abstract TData GetValue(EDataVersion version);
+        public void SetValue(TData data, EDataVersion version)
+        {
+            if (!this.HasVersion(version))
+                throw new VersionNotFoundException(
+                    string.Format("This version or version combination does not exist: {0}",
+                                  version.ToString()));
+
+            if ((version & EDataVersion.Original) == EDataVersion.Original)
+                this.original = this.getDataToSet(data);
+
+            if ((version & EDataVersion.Current) == EDataVersion.Current)
+                this.current = this.getDataToSet(data);
+
+        }
+        
+        public string Name
+        {
+            get { return this.name; }
+            private set { this.name = value; }
+        }
+        public bool IsEditing { get; private set; }
+    }
+
+    public abstract class VersionedFieldReferenceType<TData> :
+        VersionedFieldBase<TData>
+        where TData : class
+    {
+        #region Constructor
+        public VersionedFieldReferenceType(string fieldName) :
+            base(fieldName)
+        { }
+        #endregion
+
+        public virtual TData GetValue(EDataVersion version)
         {
             if (!this.HasVersion(version))
                 throw new VersionNotFoundException(
@@ -78,32 +125,44 @@ namespace oradmin
             switch (version)
             {
                 case EDataVersion.Original:
-                    return this.original;
+                    return this.getDataToGet(this.original);
                 case EDataVersion.Current:
-                    return this.current;
+                    return this.getDataToGet(this.current);
                 default:
-                    return default(TData);
+                    throw new VersionNotFoundException(
+                        string.Format("Cannot get version {0}", version.ToString()));
             }
         }
-        public override bool HasVersion(EDataVersion version)
+        public override bool  HasVersion(EDataVersion version)
         {
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    return this.original != null;
-                case EDataVersion.Current:
-                    return this.current != null;
-            }
+            bool hasVersion = true;
 
-            return false;
+            if ((version & EDataVersion.Original) == EDataVersion.Original)
+                hasVersion = hasVersion &&
+                             this.hasFieldValue(this.original);
+
+            if ((version & EDataVersion.Current) == EDataVersion.Current)
+                hasVersion = hasVersion &&
+                             this.hasFieldValue(this.current);
+
+            return hasVersion;
+        }
+
+        protected abstract bool hasOriginalValue();
+        protected abstract bool hasCurrentValue();
+        protected abstract TData getDataToSet(TData input);
+        protected TData getDataToGet(TData input)
+        {
+            return input;
         }
     }
 
-    public class VersionedFieldClonable<TData> : VersionedFieldGetBase<TData>
+    public class VersionedFieldClonable<TData> : VersionedFieldReferenceType<TData>
         where TData : class, ICloneable
     {
         #region Constructor
-        public VersionedFieldClonable(TData data)
+        public VersionedFieldClonable(string name, TData data):
+            base(name)
         {
             if (data != null)
             {
@@ -118,30 +177,19 @@ namespace oradmin
         }
         #endregion
 
-        public override void SetValue(TData data, EDataVersion version)
+        protected override TData getDataToSet(TData input)
         {
-            TData member;
-
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    member = this.original;
-                    break;
-                case EDataVersion.Current:
-                    member = this.current;
-                    break;
-            }
-
-            member = data.Clone() as TData;
+            return input.Clone() as TData;
         }
     }
 
     public class VersionedFieldNullableValueType<TData> :
-        VersionedFieldGetBase<Nullable<TData>>
+        VersionedFieldReferenceType<Nullable<TData>>
         where TData : struct
     {
         #region Constructor
-        public VersionedFieldNullableValueType(TData? data)
+        public VersionedFieldNullableValueType(string name, TData? data):
+            base(name)
         {
             if (data.HasValue)
             {
@@ -155,25 +203,13 @@ namespace oradmin
         }
         #endregion
 
-        public override void SetValue(TData? data, EDataVersion version)
+        protected override TData? getDataToSet(TData? input)
         {
-            TData? member;
-
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    member = this.original;
-                    break;
-                case EDataVersion.Current:
-                    member = this.current;
-                    break;
-            }
-
-            member = data.Value;
+            return input.Value;
         }
     }
 
-    public class VersionedFieldValueType<TData> : VersionedFieldTemplatedBase<TData>
+    public class VersionedFieldValueType<TData> : VersionedFieldBase<TData>
         where TData : struct
     {
         #region Members
@@ -182,7 +218,8 @@ namespace oradmin
         #endregion
 
         #region Constructor
-        public VersionedFieldValueType(TData data)
+        public VersionedFieldValueType(string name, TData data):
+            base(name)
         {
             this.original = new TData?(data);
             this.current = new TData?(data);
@@ -205,18 +242,6 @@ namespace oradmin
                     return default(TData);
             }
         }
-        public override void SetValue(TData data, EDataVersion version)
-        {
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    this.original = data;
-                    break;
-                case EDataVersion.Current:
-                    this.current = data;
-                    break;
-            }
-        }
         public override bool HasVersion(EDataVersion version)
         {
             switch (version)
@@ -228,6 +253,11 @@ namespace oradmin
             }
 
             return false;
+        }
+        
+        protected override TData getDataToSet(TData input)
+        {
+            return input;
         }
     }
 }
