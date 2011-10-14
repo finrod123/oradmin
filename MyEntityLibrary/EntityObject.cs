@@ -148,7 +148,15 @@ namespace myentitylibrary
 
         }
         #endregion
-        
+
+        #region Validation helpers
+        protected abstract void createValidators();
+        protected void setCurrentValidator(IEntityValidator validator)
+        {
+
+        }
+        #endregion
+
         #region IEditableObject Members
         public virtual void BeginEdit()
         {

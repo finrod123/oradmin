@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -136,6 +137,110 @@ namespace myentitylibrary
         /// The dictionary of versioned fields.
         /// </summary>
         protected Dictionary<string, IVersionedFieldBase> versionedFields;
+        protected static void Initalize(
+            Type trackerType,
+            out Dictionary<string, IVersionedFieldBase> versionedFields,
+            out Dictionary<string, Func<TEntity, object>> propertyGetters,
+            out Dictionary<string, Action<TEntity, object>> propertySetters)
+        {
+            IEnumerable<PropertyInfo> versionedPropertyInfos;
+
+            // if there are no versioned properties, return
+            if (!LoadVersionedPropertyInfos(trackerType, out versionedPropertyInfos))
+            {
+                versionedFields = null;
+                propertyGetters = null;
+                propertySetters = null;
+                return;
+            }
+
+            // create the versioned fields
+            CreateVersionedFields(versionedPropertyInfos, out versionedFields);
+            // create property getters
+            CreatePropertyGetters(versionedPropertyInfos, out propertyGetters);
+            // create property setters
+            CreatePropertySetters(versionedPropertyInfos, out propertySetters);
+        }
+        private static void CreateVersionedFields(
+            IEnumerable<PropertyInfo> versionedPropertyInfos,
+            out Dictionary<string, IVersionedFieldBase> versionedFields)
+        {
+            versionedFields = new Dictionary<string, IVersionedFieldBase>();
+
+            foreach (PropertyInfo p in versionedPropertyInfos)
+            {
+                versionedFields.Add(p.Name, CreateVersionedField(p));
+            }
+        }
+        private static bool LoadVersionedPropertyInfos(
+            Type trackerType,
+            out IEnumerable<PropertyInfo> versionedPropertyInfos)
+        {
+            Type entityType = typeof(TEntity);
+
+            versionedPropertyInfos =
+                from propertyInfo in entityType.GetProperties()
+                let propertyAtts =
+                propertyInfo.GetCustomAttributes(typeof(TrackableAttribute), false)
+                where propertyAtts.Any(
+                    (attribute)
+                        =>
+                    ((attribute as TrackableAttribute).TargetTrackerType == trackerType))
+                select propertyInfo;
+
+            return versionedPropertyInfos.Count() > 0;
+        }
+        private static void CreatePropertyGetters(
+            IEnumerable<PropertyInfo> versionedPropertyInfos,
+            out Dictionary<string, Func<TEntity, object>> propertyGetters)
+        {
+            propertyGetters = new Dictionary<string, Func<TEntity, object>>();
+
+            foreach (PropertyInfo p in versionedPropertyInfos)
+            {
+                propertyGetters.Add(p.Name, CreatePropertyGetter(p));
+            }
+        }
+        private static void CreatePropertySetters(
+            IEnumerable<PropertyInfo> versionedPropertyInfos,
+            out Dictionary<string, Action<TEntity, object>> propertySetters)
+        {
+            propertySetters = new Dictionary<string, Action<TEntity, object>>();
+
+            foreach (PropertyInfo p in versionedPropertyInfos)
+            {
+                propertySetters.Add(p.Name, CreatePropertySetter(p));
+            }
+        }
+        private static IVersionedFieldBase CreateVersionedField(PropertyInfo p)
+        {
+            Type propertyType = p.PropertyType;
+
+            if (propertyType is ICloneable)
+                return new VersionedFieldClonable(p.Name);
+            else if (IsNullable(propertyType))
+                return new VersionedFieldNullableValueType(p.Name);
+            else if (propertyType.IsValueType)
+                return new VersionFieldValueType(p.Name);
+            else
+                throw new Exception("Invalid field data type");
+        }
+        private static Func<TEntity, object> CreatePropertyGetter(PropertyInfo p)
+        {
+            MethodCallExpression m = MethodCallExpression.Call(
+        }
+        private static Action<TEntity, object> CreatePropertySetter(PropertyInfo p)
+        {
+
+        }
+
+        private static bool IsNullable(Type type)
+        {
+            if (!type.IsGenericType)
+                return false;
+
+            return type.GetGenericTypeDefinition() == typeof(Nullable<>);
+        }
 
         #region Field adapters
         /// <summary>
@@ -154,6 +259,10 @@ namespace myentitylibrary
         private bool hasChanges;
         private int changedFieldsCount;
         #endregion
+
+        #endregion
+
+        #region Static members
 
         #endregion
 
@@ -429,5 +538,10 @@ namespace myentitylibrary
         #endregion
     }
 
-    
+    public class TrackableAttribute : Attribute
+    {
+        #region Members
+        public Type TargetTrackerType { get; private set; }
+        #endregion
+    }
 }

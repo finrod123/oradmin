@@ -13,62 +13,43 @@ namespace myentitylibrary
         bool HasVersion(TVersion version);
     }
 
-    public interface IVersionedFieldQueryable<TVersion, TData>
+    public interface IVersionedFieldQueryable<TVersion>
         where TVersion : struct
     {
-        TData GetValue(TVersion version);
+        object GetValue(TVersion version);
     }
 
-    public interface IVersionedFieldModifiable<TVersion, TData>
+    public interface IVersionedFieldModifiable<TVersion>
         where TVersion : struct
     {
-        void SetValue(TData data, TVersion version);
+        void SetValue(object data, TVersion version);
     }
 
-    public interface IVersionedFieldQueryableModifiable<TVersion, TData> :
-        IVersionedFieldQueryable<TVersion, TData>,
-        IVersionedFieldModifiable<TVersion, TData>
+    public interface IVersionedFieldQueryableModifiable<TVersion> :
+        IVersionedFieldQueryable<TVersion>,
+        IVersionedFieldModifiable<TVersion>
         where TVersion : struct
     { }
 
-    
-    public interface IVersionedField<TVersion, TData> :
+
+    public interface IVersionedField<TVersion> :
         IVersionedFieldVersionQueryable<TVersion>,
-        IVersionedFieldQueryableModifiable<TVersion, TData>
+        IVersionedFieldQueryableModifiable<TVersion>
         where TVersion : struct
-    { }
+    {
+        string Name { get; }
+    }
 
     public interface IVersionedFieldBase :
-        IVersionedFieldVersionQueryable<EDataVersion>,
-        IEditableObjectInfo
-    {
-        #region Properties
-        string Name { get; }
-        bool IsEditing { get; private set; }
-        #endregion
+        IVersionedField<EDataVersion>
+    { }
 
-        #region IVersionedFieldBase<EDataVersion> Members
-        bool HasVersion(EDataVersion version);
-        #endregion
-    }
-
-    public interface IVersionedFieldTemplatedBase<TData> :
-        IVersionedFieldBase,
-        IVersionedField<EDataVersion, TData>
-    {
-        #region IVersionedField<EDataVersion,TData> Members
-        TData GetValue(EDataVersion version);
-        void SetValue(TData data, EDataVersion version);
-        #endregion
-    }
-
-    public abstract class VersionedFieldBase<TData> :
-        IVersionedFieldTemplatedBase<TData>
+    public abstract class VersionedFieldBase :
+        IVersionedFieldBase
     {
         #region Members
-        protected string name;
-        protected TData original,
-                        current;
+        protected object original,
+                         current;
         #endregion
 
         #region Constructor
@@ -81,183 +62,144 @@ namespace myentitylibrary
         }
         #endregion
 
-        public abstract bool HasVersion(EDataVersion version);
-        public abstract TData GetValue(EDataVersion version);
-        public void SetValue(TData data, EDataVersion version)
+        #region IVersionedField<EDataVersion> Members
+        public string Name { get; private set; }
+        #endregion
+
+        #region IVersionedFieldVersionQueryable<EDataVersion> Members
+        public bool HasVersion(EDataVersion version)
+        {
+            bool hasVersions = true;
+
+            if ((version & EDataVersion.Original) == EDataVersion.Original)
+                hasVersions = hasVersions &&
+                              this.original != null;
+
+            if ((version & EDataVersion.Current) == EDataVersion.Current)
+                hasVersions = hasVersions &&
+                              this.current != null;
+
+            return hasVersions;
+        }
+        #endregion
+
+        #region IVersionedFieldQueryable<EDataVersion> Members
+        public object GetValue(EDataVersion version)
         {
             if (!this.HasVersion(version))
                 throw new VersionNotFoundException(
-                    string.Format("This version or version combination does not exist: {0}",
-                                  version.ToString()));
+                    string.Format("Version not found: {0}", version.ToString()));
 
+            switch (version)
+            {
+                case EDataVersion.Original:
+                    return this.original;
+                    break;
+                case EDataVersion.Current:
+                    return this.current;
+                    break;
+                default:
+                    throw new ArgumentException(
+                        string.Format("Cannot find version: {0}", version.ToString()),
+                        "version");
+            }
+        }
+        #endregion
+
+        #region IVersionedFieldModifiable<EDataVersion> Members
+        public virtual void SetValue(object data, EDataVersion version)
+        {
+            // check the input data type
+            if (!this.isValidInputType(data))
+                throw new ArgumentException(
+                    string.Format("Input data type not valid: {0}",
+                                   data.GetType().ToString()),
+                    "data");
+
+            // check the version
+            if (!this.HasVersion(version))
+                throw new VersionNotFoundException(
+                    string.Format("Version not found: {0}", version.ToString()));
+
+            // set data
             if ((version & EDataVersion.Original) == EDataVersion.Original)
-                this.original = this.getDataToSet(data);
+                this.original = this.createDataForSet(data);
 
             if ((version & EDataVersion.Current) == EDataVersion.Current)
-                this.current = this.getDataToSet(data);
+                this.current = this.createDataForSet(data);
+        }
+        #endregion
 
-        }
-        
-        public string Name
-        {
-            get { return this.name; }
-            private set { this.name = value; }
-        }
-        public bool IsEditing { get; private set; }
+        protected abstract bool isValidInputType(object input);
+        protected abstract object createDataForSet(object input);
     }
 
-    public abstract class VersionedFieldReferenceType<TData> :
-        VersionedFieldBase<TData>
-        where TData : class
+    public class VersionedFieldClonable : VersionedFieldBase
     {
         #region Constructor
-        public VersionedFieldReferenceType(string fieldName) :
-            base(fieldName)
+        public VersionedFieldClonable(string name) :
+            base(name)
         { }
         #endregion
 
-        public virtual TData GetValue(EDataVersion version)
+        protected override object createDataForSet(object input)
         {
-            if (!this.HasVersion(version))
-                throw new VersionNotFoundException(
-                    string.Format("Version {0} not found!", version.ToString()));
+            ICloneable data = input as ICloneable;
 
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    return this.getDataToGet(this.original);
-                case EDataVersion.Current:
-                    return this.getDataToGet(this.current);
-                default:
-                    throw new VersionNotFoundException(
-                        string.Format("Cannot get version {0}", version.ToString()));
-            }
+            return data.Clone();
         }
-        public override bool  HasVersion(EDataVersion version)
+        protected override bool isValidInputType(object input)
         {
-            bool hasVersion = true;
+            Type inputType = input.GetType();
 
-            if ((version & EDataVersion.Original) == EDataVersion.Original)
-                hasVersion = hasVersion &&
-                             this.hasFieldValue(this.original);
-
-            if ((version & EDataVersion.Current) == EDataVersion.Current)
-                hasVersion = hasVersion &&
-                             this.hasFieldValue(this.current);
-
-            return hasVersion;
+            return inputType is ICloneable;
         }
+    }
 
-        protected abstract bool hasOriginalValue();
-        protected abstract bool hasCurrentValue();
-        protected abstract TData getDataToSet(TData input);
-        protected TData getDataToGet(TData input)
+    public abstract class VersionedFieldValueTypeBase : VersionedFieldBase
+    {
+        #region Constructor
+        public VersionedFieldValueTypeBase(string name) :
+            base(name)
+        { }
+        #endregion
+
+        protected override object createDataForSet(object input)
         {
             return input;
         }
-    }
-
-    public class VersionedFieldClonable<TData> : VersionedFieldReferenceType<TData>
-        where TData : class, ICloneable
-    {
-        #region Constructor
-        public VersionedFieldClonable(string name, TData data):
-            base(name)
+        protected virtual bool isValidInputType(object input)
         {
-            if (data != null)
-            {
-                this.original = data.Clone() as TData;
-                this.current = data.Clone() as TData;
+            Type type = input.GetType();
 
-            } else
-            {
-                this.original = null;
-                this.current = null;
-            }
-        }
-        #endregion
-
-        protected override TData getDataToSet(TData input)
-        {
-            return input.Clone() as TData;
+            return type.IsValueType;
         }
     }
 
-    public class VersionedFieldNullableValueType<TData> :
-        VersionedFieldReferenceType<Nullable<TData>>
-        where TData : struct
+    public class VersionFieldValueType : VersionedFieldValueTypeBase
     {
         #region Constructor
-        public VersionedFieldNullableValueType(string name, TData? data):
+        public VersionFieldValueType(string name) :
             base(name)
-        {
-            if (data.HasValue)
-            {
-                this.original = new TData?(data.Value);
-                this.current = new TData?(data.Value);
-            } else
-            {
-                this.original = null;
-                this.current = null;
-            }
-        }
-        #endregion
-
-        protected override TData? getDataToSet(TData? input)
-        {
-            return input.Value;
-        }
+        { }
     }
 
-    public class VersionedFieldValueType<TData> : VersionedFieldBase<TData>
-        where TData : struct
+    public class VersionedFieldNullableValueType : VersionedFieldValueTypeBase
     {
-        #region Members
-        TData? original,
-               current;
-        #endregion
-
         #region Constructor
-        public VersionedFieldValueType(string name, TData data):
+        public VersionedFieldNullableValueType(string name) :
             base(name)
-        {
-            this.original = new TData?(data);
-            this.current = new TData?(data);
-        }
+        { }
         #endregion
 
-        public override TData GetValue(EDataVersion version)
+        protected override bool isValidInputType(object input)
         {
-            if (!this.HasVersion(version))
-                throw new VersionNotFoundException(
-                    string.Format("Version {0} not found!", version.ToString()));
+            Type type = input.GetType();
 
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    return this.original.Value;
-                case EDataVersion.Current:
-                    return this.current.Value;
-                default:
-                    return default(TData);
-            }
-        }
-        public override bool HasVersion(EDataVersion version)
-        {
-            switch (version)
-            {
-                case EDataVersion.Original:
-                    return this.original.HasValue;
-                case EDataVersion.Current:
-                    return this.current.HasValue;
-            }
+            if (!type.IsGenericType)
+                return false;
 
-            return false;
-        }
-        
-        protected override TData getDataToSet(TData input)
-        {
-            return input;
+            return type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
     }
 }

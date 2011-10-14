@@ -7,6 +7,8 @@ using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
+using Oracle.DataAccess.Client;
+using Oracle.DataAccess.Types;
 using myentitylibrary;
 
 namespace oradminbl
@@ -48,6 +50,12 @@ namespace oradminbl
     public interface IConnection : IConnectionBase, IConnectDescriptorBase
     {
         string TnsName { get; set; }
+
+        bool Open(string password, out OracleConnection connection);
+        bool OpenWithNewPassword(string password, out OracleConnection connection);
+
+        bool Test(string password);
+        bool TestWithNewPassword(string password);
     }
 
     [XmlRoot("Connection")]
@@ -99,6 +107,11 @@ namespace oradminbl
         string tnsName;
         #endregion
 
+        #region Validators
+        ConnectionValidator basicValidator;
+        ConnectionOpenTestValidator openTestValidator;
+        #endregion
+
         #region Constants
         public static const string NAME_PROP_STRING = "Name";
         public static const string COMMENT_PROP_STRING = "Comment";
@@ -112,10 +125,27 @@ namespace oradminbl
         #region Constructor
         public Connection()
         {
-
+            // create validators
+            this.createValidators();
         }
         #endregion
-        
+
+        #region Validation helpers
+        protected override void  createValidators()
+        {
+            // create a basic connection validator
+            this.basicValidator = new ConnectionValidator(this);
+            // create an OpenTest connection validator
+            this.openTestValidator = new ConnectionOpenTestValidator(this);
+            // assign basic validator as a default validator
+            this.validator = this.basicValidator;
+        }
+        protected override void setCurrentValidator(IEntityValidator validator)
+        {
+            
+        }
+        #endregion
+
         public override void RejectChanges()
         {
             throw new NotImplementedException();
@@ -310,6 +340,26 @@ namespace oradminbl
             }
         }
 
+        #endregion
+
+        #region IConnection Members
+        public bool Open(string password, out OracleConnection connection)
+        {
+            // first performa validation
+
+        }
+        public bool OpenWithNewPassword(string password, out OracleConnection connection)
+        {
+            throw new NotImplementedException();
+        }
+        public bool Test(string password)
+        {
+            throw new NotImplementedException();
+        }
+        public bool TestWithNewPassword(string password)
+        {
+            throw new NotImplementedException();
+        }
         #endregion
     }
 }

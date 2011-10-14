@@ -52,6 +52,14 @@ namespace myentitylibrary
         void ValidateEntity();
         void ValidateProperty(string property, object value);
     }
+    public interface IEntityValidatorForEntityObject<TData, TKey>:
+        IEntityValidator
+        where TData : IEntityDataContainer<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        void AssociateWithEntity(IEntityObjectBase<TData, TKey> entity);
+        void DisassociateFromEntity();
+    }
     #endregion
 
     #region Entity validation class
@@ -507,6 +515,15 @@ namespace myentitylibrary
         /// </summary>
         protected abstract void initializePropertyValues();
         #endregion
+
+        /// <summary>
+        /// Clears all errors and reads the new entity data.
+        /// </summary>
+        /// <param name="entity">Entity to be associated with.</param>
+        public void AssociateWithEntity(TEntity entity)
+        {
+            
+        }
 
         #region IEntityWithErrorReporting Members
         public bool HasErrors { get; private set; }
